@@ -23,18 +23,22 @@ struct SignInView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 4) {
-                AppMark()
-                Text("Love Around")
-                    .font(.system(size: 17, weight: .semibold))
-                    .padding(.top, 2)
+                // Mark and name on one line, so both buttons fit without scrolling.
+                HStack(spacing: 6) {
+                    AppMark(size: 26)
+                    Text("Love Around")
+                        .font(.system(size: 17, weight: .semibold))
+                }
                 Text(tr("Тихий знак, что о тебе думают"))
                     .font(.system(size: 12))
                     .foregroundStyle(Palette.muted)
                     .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
                 SignInWithAppleButton(.signIn, onRequest: { model.prepareApple($0) }, onCompletion: { model.appleFinished($0) })
                     .signInWithAppleButtonStyle(.white)
                     .frame(height: 40)
-                    .padding(.top, 8)
+                    .padding(.top, 6)
                 Button(tr("Войти по коду")) { model.startCode() }
                     .accessibilityIdentifier("codeSignIn")
                 if let notice = model.notice {

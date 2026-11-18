@@ -68,9 +68,16 @@ extension XCUIApplication {
         element("settings").tap()
         let signOut = element("signOut")
         XCTAssertTrue(signOut.waitForExistence(timeout: 5))
-        signOut.tap()
+        // The settings page slides in: a tap during the slide is lost, so wait
+        // until the button takes taps, and tap again if no alert came.
         let confirm = element("signOutConfirm")
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        for _ in 0..<3 where !confirm.exists {
+            _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"),
+                                                               object: signOut)], timeout: 5)
+            signOut.tap()
+            _ = confirm.waitForExistence(timeout: 3)
+        }
+        XCTAssertTrue(confirm.exists, "no «Выйти?» alert")
         confirm.tap()
     }
 }

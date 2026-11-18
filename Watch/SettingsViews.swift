@@ -36,9 +36,10 @@ struct SettingsView: View {
             }
         }
         .navigationTitle(tr("Настройки"))
-        .confirmationDialog(tr("Выйти на этих часах?"), isPresented: $confirmSignOut) {
+        .alert(tr("Выйти на этих часах?"), isPresented: $confirmSignOut) {
             Button(tr("Выйти"), role: .destructive) { model.signOut() }
                 .accessibilityIdentifier("signOutConfirm")
+            Button(tr("Отмена"), role: .cancel) {}
         } message: {
             Text(tr("Часы останутся в «Устройствах» на {site}: убери их там.", ["site": Config.webApp]))
         }
