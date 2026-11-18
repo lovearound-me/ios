@@ -65,9 +65,14 @@ extension XCUIApplication {
     }
 
     func signOut() {
-        element("settings").tap()
-        let signOut = element("signOut")
-        XCTAssertTrue(signOut.waitForExistence(timeout: 5))
+        buttons["settings"].tap()
+        // CI's watch simulator is slow, and XCUITest gives the app only so
+        // long to describe its screen: asked for every element while the
+        // settings page still slides in, it once ran out. So: let the slide
+        // finish, then ask for buttons only.
+        Thread.sleep(forTimeInterval: 1.5)
+        let signOut = buttons["signOut"]
+        XCTAssertTrue(signOut.waitForExistence(timeout: 10))
         // The settings page slides in: a tap during the slide is lost, so wait
         // until the button takes taps, and tap again if no alert came.
         // watchOS drops identifiers on alert buttons, and the settings list

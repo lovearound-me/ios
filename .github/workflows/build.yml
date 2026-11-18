@@ -52,8 +52,6 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO -quiet build
 
-      # The CI simulators are slow: a UI query can time out on a page that
-      # opens in a second on a Mac, so a failing test gets two more tries.
       - name: Watch UI tests on made-up data
         run: |
           udid=$(xcrun simctl list devices available -j | python3 -c '
@@ -66,8 +64,7 @@ jobs:
           ')
           xcodebuild test -project LoveAround.xcodeproj -scheme LoveAroundWatch \
             -destination "id=$udid" -derivedDataPath build CODE_SIGNING_ALLOWED=NO \
-            -only-testing:LoveAroundWatchUITests/DemoUITests -resultBundlePath build/watch-ui-tests.xcresult \
-            -retry-tests-on-failure -test-iterations 3 -quiet
+            -only-testing:LoveAroundWatchUITests/DemoUITests -resultBundlePath build/watch-ui-tests.xcresult -quiet
 
       # Each app's tests and the screenshots run even if the other's tests fail.
       - name: iPhone UI tests on made-up data
@@ -84,8 +81,7 @@ jobs:
           ')
           xcodebuild test -project LoveAround.xcodeproj -scheme LoveAround \
             -destination "id=$udid" -derivedDataPath build CODE_SIGNING_ALLOWED=NO \
-            -only-testing:LoveAroundUITests/PhoneDemoUITests -resultBundlePath build/phone-ui-tests.xcresult \
-            -retry-tests-on-failure -test-iterations 3 -quiet
+            -only-testing:LoveAroundUITests/PhoneDemoUITests -resultBundlePath build/phone-ui-tests.xcresult -quiet
 
       - name: Screenshots
         if: ${{ !cancelled() && steps.watch.outcome == 'success' && steps.phone.outcome == 'success' }}
