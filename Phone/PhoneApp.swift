@@ -39,6 +39,9 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: model.incoming)
         .onOpenURL { model.handle(url: $0) }
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            if let url = activity.webpageURL { model.handle(url: url) }
+        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active: model.becameActive()
@@ -78,6 +81,11 @@ struct MainTabs: View {
         .sheet(item: $model.adding) { adding in
             NavigationStack {
                 AddContactView(invite: adding.invite)
+            }
+        }
+        .sheet(item: $model.pairing) { pairing in
+            NavigationStack {
+                PairView(code: pairing.code)
             }
         }
     }

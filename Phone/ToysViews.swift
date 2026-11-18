@@ -6,7 +6,6 @@ import UIKit
 /// device joins by the six digits on its screen, or a board by its token.
 struct ToysView: View {
     @EnvironmentObject var model: AppModel
-    @State private var pairing = false
     @State private var addingBoard = false
     @State private var removing: Device?
 
@@ -38,7 +37,7 @@ struct ToysView: View {
                 }
                 .listRowBackground(Theme.field)
                 Section {
-                    Button { pairing = true } label: {
+                    Button { model.pairing = AppModel.Pairing(code: "") } label: {
                         Label(tr("Подключить по коду"), systemImage: "number")
                     }
                     .accessibilityIdentifier("pairByCode")
@@ -73,9 +72,6 @@ struct ToysView: View {
             .navigationTitle(tr("Игрушки"))
             .refreshable { await model.loadDevices() }
             .task { await model.loadDevices() }
-            .sheet(isPresented: $pairing) {
-                NavigationStack { PairView() }
-            }
             .sheet(isPresented: $addingBoard) {
                 NavigationStack { BoardView() }
             }

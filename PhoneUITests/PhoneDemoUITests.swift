@@ -110,6 +110,19 @@ final class PhoneDemoUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Подключено"].waitForExistence(timeout: 5))
     }
 
+    /// The QR on a watch or a lamp opens the pairing with its digits in.
+    /// The https form (lovearound.me/login/devices#…) takes the site's
+    /// apple-app-site-association, so here it's the app's own scheme.
+    func testPairLinkOpensPairing() {
+        let app = XCUIApplication.russian(demo: "home")
+        XCTAssertTrue(app.element("anyone").waitForExistence(timeout: 10))
+        app.open(URL(string: "lovearound://pair/482913")!)
+        let code = app.element("pairCode")
+        XCTAssertTrue(code.waitForExistence(timeout: 5))
+        XCTAssertEqual(code.value as? String, "482913")
+        XCTAssertTrue(app.element("confirmPairing").waitForExistence(timeout: 5))
+    }
+
     func testSignOut() {
         let app = XCUIApplication.russian(demo: "settings")
         app.signOut()

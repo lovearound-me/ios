@@ -20,6 +20,13 @@ final class AppModel: ObservableObject {
         var invite: String
     }
 
+    /// The pairing sheet, opened by «Подключить по коду» or by the QR on a
+    /// watch or a lamp (lovearound.me/login/devices#482913), digits filled in.
+    struct Pairing: Identifiable {
+        let id = UUID()
+        var code: String
+    }
+
     /// A line over the tab bar for a moment: «Аня — улетело ♥», or what failed.
     struct Toast: Equatable {
         let text: String
@@ -48,6 +55,7 @@ final class AppModel: ObservableObject {
 
     @Published var tab: Tab = .hearts
     @Published var adding: Adding?
+    @Published var pairing: Pairing?
     @Published private(set) var toast: Toast?
     /// The circle that just sent, filled for a moment.
     @Published private(set) var justSent: String?
@@ -81,6 +89,7 @@ final class AppModel: ObservableObject {
     private let defaults = UserDefaults.standard
     private var appleNonce = ""
     private var pendingAdd: String?
+    private var pendingPair: String?
     private var toastGeneration = 0
     private var goingOffline: Task<Void, Never>?
     private var saving: Task<Void, Never>?
@@ -493,17 +502,24 @@ final class AppModel: ObservableObject {
     // MARK: Links
 
     func handle(url: URL) {
+        // The QR of a device and a Love ID, as https links (universal links,
+        // once lovearound.me says the app may take them).
+        if url.scheme == "https", url.host == "lovearound.me" {
+            if let code = Self.pairCode(from: url) {
+                openPairing(code)
+            } else if url.path.contains("/i/"), let invite = Self.inviteID(from: url.absoluteString) {
+                openAdding(invite)
+            }
+            return
+        }
         guard url.scheme == Config.urlScheme else { return }
         switch url.host {
+        case "pair":
+            if let code = Self.pairCode(from: url) { openPairing(code) }
         case "add":
             // The whole link, not url.path: its leading "/" would leave inviteID an empty id.
             guard let invite = Self.inviteID(from: url.absoluteString) else { return }
-            if signedIn {
-                tab = .book
-                adding = Adding(invite: invite)
-            } else {
-                pendingAdd = invite
-            }
+            openAdding(invite)
         case "signin":
             // Safari can hand the same link over twice; the first one signs in
             // and uses up the state, so a late copy is no news.
@@ -520,6 +536,34 @@ final class AppModel: ObservableObject {
         default:
             break
         }
+    }
+
+    private func openAdding(_ invite: String) {
+        guard signedIn else { pendingAdd = invite; return }
+        tab = .book
+        pairing = nil
+        adding = Adding(invite: invite)
+    }
+
+    private func openPairing(_ code: String) {
+        guard signedIn else { pendingPair = code; return }
+        tab = .toys
+        adding = nil
+        pairing = Pairing(code: code)
+    }
+
+    /// The six digits of lovearound.me/login/devices#482913 (the watch's QR)
+    /// or lovearound://pair/482913.
+    static func pairCode(from url: URL) -> String? {
+        let candidate: String?
+        if url.scheme == "https" {
+            guard url.path.hasPrefix("/login/devices") else { return nil }
+            candidate = url.fragment
+        } else {
+            candidate = url.pathComponents.last
+        }
+        guard let code = candidate?.filter({ $0 != " " }), code.count == 6, code.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        return code
     }
 
     // MARK: Account
@@ -571,8 +615,10 @@ final class AppModel: ObservableObject {
         Task { await reload() }
         if let invite = pendingAdd {
             pendingAdd = nil
-            tab = .book
-            adding = Adding(invite: invite)
+            openAdding(invite)
+        } else if let code = pendingPair {
+            pendingPair = nil
+            openPairing(code)
         }
     }
 

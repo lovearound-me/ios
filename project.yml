@@ -61,6 +61,9 @@ targets:
       path: Phone/LoveAround.entitlements
       properties:
         com.apple.developer.applesignin: [Default]
+        # Links to lovearound.me open the app once the site's
+        # /.well-known/apple-app-site-association names it.
+        com.apple.developer.associated-domains: ["applinks:lovearound.me"]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios
