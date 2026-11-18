@@ -14,6 +14,7 @@ struct MainView: View {
                 VStack(spacing: 8) {
                     Text(tr("О ком думаешь?"))
                         .font(.system(size: 15, weight: .semibold))
+                        .accessibilityIdentifier("mainHeading")
                     LazyVGrid(columns: columns, spacing: 8) {
                         AnyoneCircle(sent: model.justSent == AppModel.anyoneID) { model.sendAnyone() }
                         ForEach(model.circles) { contact in
@@ -38,6 +39,7 @@ struct MainView: View {
                         .padding(.vertical, 7)
                         .background(Color(white: 0.17), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .accessibilityIdentifier("caption")
                 }
             }
             .animation(.easeOut(duration: 0.2), value: model.caption)
@@ -50,6 +52,7 @@ struct MainView: View {
                         Image(systemName: "gearshape")
                     }
                     .accessibilityLabel(tr("Настройки"))
+                    .accessibilityIdentifier("settings")
                 }
             }
         }

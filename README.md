@@ -60,6 +60,14 @@ every push and takes a screenshot of every screen in Russian and English
       -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
     scripts/screenshots.sh build/Build/Products/Debug-watchsimulator/LoveAround.app shots
 
+UI tests tap through the app in a simulator. `DemoUITests` (made-up data)
+run in CI; `LiveUITests` signs in by code against the real server, sends one
+heart and signs out, on a Mac only (see the file for how):
+
+    xcodebuild test -project LoveAround.xcodeproj -scheme LoveAroundWatch \
+      -destination 'platform=watchOS Simulator,name=<a watch>' \
+      -only-testing:LoveAroundWatchUITests/DemoUITests
+
 `--demo <name>` draws one screen from made-up data, without signing in:
 `signin exists code expired computer connected circles sent anyone empty
 signal settings colors delete`.

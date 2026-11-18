@@ -36,6 +36,7 @@ struct SignInView: View {
                     .frame(height: 40)
                     .padding(.top, 8)
                 Button(tr("Войти по коду")) { model.startCode() }
+                    .accessibilityIdentifier("codeSignIn")
                 if let notice = model.notice {
                     Text(notice)
                         .font(.footnote)
@@ -115,6 +116,7 @@ struct CodeView: View {
                             Text(spaced(code.code))
                                 .font(.system(size: 22, weight: .semibold).monospacedDigit())
                                 .padding(.top, 4)
+                                .accessibilityIdentifier("pairingCode")
                             Text(tr("Наведи камеру iPhone"))
                                 .font(.system(size: 12))
                                 .foregroundStyle(.secondary)
@@ -180,6 +182,7 @@ struct ConnectedView: View {
                 .symbolEffect(.pulse)
             Text(tr("Часы подключены"))
                 .font(.system(size: 16, weight: .semibold))
+                .accessibilityIdentifier("connected")
             if let email = model.session?.email {
                 Text(email)
                     .font(.system(size: 12))

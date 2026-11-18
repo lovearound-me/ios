@@ -15,6 +15,7 @@ struct SettingsView: View {
                     Text(tr("Мой цвет"))
                 }
             }
+            .accessibilityIdentifier("myColor")
             if let email = model.session?.email {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(tr("Аккаунт"))
@@ -27,6 +28,7 @@ struct SettingsView: View {
                 }
             }
             Button(tr("Выйти")) { confirmSignOut = true }
+                .accessibilityIdentifier("signOut")
             NavigationLink {
                 DeleteAccountView()
             } label: {
@@ -36,6 +38,7 @@ struct SettingsView: View {
         .navigationTitle(tr("Настройки"))
         .confirmationDialog(tr("Выйти на этих часах?"), isPresented: $confirmSignOut) {
             Button(tr("Выйти"), role: .destructive) { model.signOut() }
+                .accessibilityIdentifier("signOutConfirm")
         } message: {
             Text(tr("Часы останутся в «Устройствах» на {site}: убери их там.", ["site": Config.webApp]))
         }

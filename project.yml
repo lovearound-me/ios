@@ -61,6 +61,21 @@ targets:
         TARGETED_DEVICE_FAMILY: "4"
         GENERATE_INFOPLIST_FILE: NO
 
+  # Taps through the app in a simulator: DemoUITests on made-up data (CI),
+  # LiveUITests against the server (on a Mac, see the file).
+  LoveAroundWatchUITests:
+    type: bundle.ui-testing
+    platform: watchOS
+    sources:
+      - path: WatchUITests
+    dependencies:
+      - target: LoveAroundWatch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.watchkitapp.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: LoveAroundWatch
+
 schemes:
   LoveAroundWatch:
     build:
@@ -68,3 +83,7 @@ schemes:
         LoveAroundWatch: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - LoveAroundWatchUITests
