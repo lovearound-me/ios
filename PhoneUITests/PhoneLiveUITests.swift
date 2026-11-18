@@ -25,12 +25,12 @@ final class PhoneLiveUITests: XCTestCase {
 
         let circle = app.buttons[person]
         XCTAssertTrue(circle.waitForExistence(timeout: 30), "no circle for \(person): the book didn't load")
-        add(XCTAttachment(screenshot: app.screenshot()))
+        shot(app)
         circle.tap()
         let sent = "\(person) — улетело ♥"
         let toast = app.element("toast")
         XCTAssertTrue(toast.waitForExistence(timeout: 3))
-        add(XCTAttachment(screenshot: app.screenshot()))
+        shot(app)
         // «Улетело» shows at once and for 2.5 s; if the server says no, a
         // red toast replaces it. Watch for one a while.
         let failed = app.descendants(matching: .any)
@@ -39,20 +39,27 @@ final class PhoneLiveUITests: XCTestCase {
 
         app.openTab("Книга")
         XCTAssertTrue(app.element("send-\(person)").waitForExistence(timeout: 5))
-        add(XCTAttachment(screenshot: app.screenshot()))
+        shot(app)
 
         app.openTab("Игрушки")
         // The test account has one device of its own (the tools' «claude»).
         // A row reads as one: «claude, Принимает и отправляет · …».
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "claude")).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 15), "the devices didn't load")
-        add(XCTAttachment(screenshot: app.screenshot()))
+        shot(app)
 
         app.openTab("Настройки")
         XCTAssertTrue(app.element("account").waitForExistence(timeout: 5))
-        add(XCTAttachment(screenshot: app.screenshot()))
+        shot(app)
 
         app.signOut()
         XCTAssertTrue(app.element("signInScreen").waitForExistence(timeout: 5))
+    }
+
+    /// Kept on success too: rerunning to see the screens sends another heart.
+    private func shot(_ app: XCUIApplication) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 }
