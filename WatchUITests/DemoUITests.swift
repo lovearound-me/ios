@@ -65,13 +65,14 @@ extension XCUIApplication {
     }
 
     func signOut() {
-        buttons["settings"].tap()
+        // The toolbar item and its button both carry the identifier.
+        buttons["settings"].firstMatch.tap()
         // CI's watch simulator is slow, and XCUITest gives the app only so
         // long to describe its screen: asked for every element while the
         // settings page still slides in, it once ran out. So: let the slide
         // finish, then ask for buttons only.
         Thread.sleep(forTimeInterval: 1.5)
-        let signOut = buttons["signOut"]
+        let signOut = buttons["signOut"].firstMatch
         XCTAssertTrue(signOut.waitForExistence(timeout: 10))
         // The settings page slides in: a tap during the slide is lost, so wait
         // until the button takes taps, and tap again if no alert came.
