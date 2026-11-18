@@ -70,7 +70,10 @@ extension XCUIApplication {
         XCTAssertTrue(signOut.waitForExistence(timeout: 5))
         // The settings page slides in: a tap during the slide is lost, so wait
         // until the button takes taps, and tap again if no alert came.
-        let confirm = element("signOutConfirm")
+        // watchOS drops identifiers on alert buttons, and the settings list
+        // with its own «Выйти» stays in the tree behind the alert.
+        let confirm = descendants(matching: .button)
+            .matching(NSPredicate(format: "label == %@ AND identifier != %@", "Выйти", "signOut")).firstMatch
         for _ in 0..<3 where !confirm.exists {
             _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"),
                                                                object: signOut)], timeout: 5)
