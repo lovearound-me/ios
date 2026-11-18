@@ -362,17 +362,17 @@ struct BoardView: View {
         .navigationBarTitleDisplayMode(.inline)
         .interactiveDismissDisabled(token != nil && !copied)
         .toolbar {
-            if token == nil {
-                ToolbarItem(placement: .cancellationAction) {
+            ToolbarItem(placement: .cancellationAction) {
+                if token == nil {
                     Button(tr("Отмена")) { dismiss() }
                 }
-                ToolbarItem(placement: .confirmationAction) {
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                if token == nil {
                     Button(tr("Подключить"), action: create)
                         .disabled(busy || name.trimmingCharacters(in: .whitespaces).isEmpty || (!receives && !sends))
                         .accessibilityIdentifier("createBoard")
-                }
-            } else {
-                ToolbarItem(placement: .confirmationAction) {
+                } else {
                     Button(tr("Готово")) { dismiss() }
                 }
             }

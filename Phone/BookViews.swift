@@ -10,62 +10,85 @@ struct BookView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if model.contacts.isEmpty && model.loaded {
-                    EmptyBook()
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
+            list
+                .scrollContentBackground(.hidden)
+                .background(Theme.paper)
+                .navigationTitle(tr("Книга"))
+                .searchable(text: $search, prompt: tr("Найти"))
+                .toolbar { bookToolbar }
+                .refreshable { await model.reload() }
+                .sheet(item: $editing) { contact in
+                    NavigationStack { ContactEditor(contact: contact) }
                 }
-                if !close.isEmpty {
-                    Section {
-                        ForEach(close) { row($0) }
-                            .onMove(perform: search.isEmpty ? model.moveClose : nil)
-                    } header: {
-                        Text(tr("Рядом"))
-                    } footer: {
-                        if search.isEmpty {
-                            Text(tr("Кружки на главном экране, в этом порядке."))
-                        }
-                    }
-                }
-                if !others.isEmpty {
-                    Section(tr("Остальные")) {
-                        ForEach(others) { row($0) }
-                    }
-                }
-                if model.inviteURL != nil {
-                    Section {
-                        ShareLink(item: model.shareText) {
-                            Label(tr("Поделиться своим Love ID"), systemImage: "square.and.arrow.up")
-                        }
-                    } footer: {
-                        Text(tr("Отправь его тем, кто хочет нажимать, когда думает о тебе."))
-                    }
+        }
+    }
+
+    private var list: some View {
+        List {
+            if model.contacts.isEmpty && model.loaded {
+                EmptyBook()
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
+            if !close.isEmpty {
+                closeSection
+            }
+            if !others.isEmpty {
+                Section(tr("Остальные")) {
+                    ForEach(others) { contact in row(contact) }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.paper)
-            .navigationTitle(tr("Книга"))
-            .searchable(text: $search, prompt: tr("Найти"))
-            .toolbar {
-                if model.closeContacts.count > 1 {
-                    ToolbarItem(placement: .topBarLeading) {
-                        EditButton()
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { model.adding = AppModel.Adding(invite: "") } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel(tr("Добавить по ссылке"))
-                    .accessibilityIdentifier("bookAdd")
-                }
-            }
-            .refreshable { await model.reload() }
-            .sheet(item: $editing) { contact in
-                NavigationStack { ContactEditor(contact: contact) }
+            if model.inviteURL != nil {
+                shareSection
             }
         }
+    }
+
+    private var closeSection: some View {
+        Section {
+            ForEach(close) { contact in row(contact) }
+                .onMove(perform: reorder)
+        } header: {
+            Text(tr("Рядом"))
+        } footer: {
+            if search.isEmpty {
+                Text(tr("Кружки на главном экране, в этом порядке."))
+            }
+        }
+    }
+
+    private var shareSection: some View {
+        Section {
+            ShareLink(item: model.shareText) {
+                Label(tr("Поделиться своим Love ID"), systemImage: "square.and.arrow.up")
+            }
+        } footer: {
+            Text(tr("Отправь его тем, кто хочет нажимать, когда думает о тебе."))
+        }
+    }
+
+    /// No `if` around a ToolbarItem: Xcode 16 then finds `toolbar` ambiguous.
+    @ToolbarContentBuilder
+    private var bookToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            if model.closeContacts.count > 1 && search.isEmpty {
+                EditButton()
+            }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button { model.adding = AppModel.Adding(invite: "") } label: {
+                Image(systemName: "plus")
+            }
+            .accessibilityLabel(tr("Добавить по ссылке"))
+            .accessibilityIdentifier("bookAdd")
+        }
+    }
+
+    /// Dragging works on the whole «Рядом» only, not on search results.
+    private var reorder: ((IndexSet, Int) -> Void)? {
+        guard search.isEmpty else { return nil }
+        let model = model
+        return { source, destination in model.moveClose(from: source, to: destination) }
     }
 
     private var close: [Contact] { model.closeContacts.filter(matches) }
