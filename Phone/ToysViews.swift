@@ -10,14 +10,15 @@ struct ToysView: View {
     @State private var removing: Device?
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $model.toysPath) {
             List {
                 Section {
                     Text(tr("Игрушка, лампа или своя плата, которая светится, когда о тебе думают, или отправляет сердечко по кнопке."))
                         .font(.system(size: 15))
                         .foregroundStyle(Theme.muted)
+                        // The list's own insets: on iOS 26 a row narrower than
+                        // them gets its first letter cut at the left edge.
                         .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 4, trailing: 4))
                 }
                 Section(tr("Устройства")) {
                     if let problem = model.devicesProblem {
@@ -29,10 +30,13 @@ struct ToysView: View {
                             .foregroundStyle(Theme.muted)
                     }
                     ForEach(model.devices) { device in
-                        DeviceRow(device: device)
-                            .swipeActions {
-                                Button(tr("Отключить"), role: .destructive) { removing = device }
-                            }
+                        NavigationLink(value: device.id) {
+                            DeviceRow(device: device)
+                        }
+                        .accessibilityIdentifier("device-" + device.id)
+                        .swipeActions {
+                            Button(tr("Отключить"), role: .destructive) { removing = device }
+                        }
                     }
                 }
                 .listRowBackground(Theme.field)
@@ -70,6 +74,9 @@ struct ToysView: View {
             .scrollContentBackground(.hidden)
             .background(Theme.paper)
             .navigationTitle(tr("Игрушки"))
+            .navigationDestination(for: String.self) { element in
+                ToysView.destination(element)
+            }
             .refreshable { await model.loadDevices() }
             .task { await model.loadDevices() }
             .sheet(isPresented: $addingBoard) {
@@ -87,6 +94,20 @@ struct ToysView: View {
             } message: {
                 Text(tr("Оно перестанет получать и отправлять сердечки. Подключить снова можно в любой момент."))
             }
+        }
+    }
+}
+
+extension ToysView {
+    /// A page in «Игрушки»: a device's card, or one of its pages.
+    @ViewBuilder
+    static func destination(_ element: String) -> some View {
+        let (page, id) = DeviceCard.page(element)
+        switch page {
+        case "who": DeviceWhoView(id: id)
+        case "does": DeviceDoesView(id: id)
+        case "name": DeviceNameView(id: id)
+        default: DeviceCard(id: id)
         }
     }
 }
@@ -123,13 +144,16 @@ struct DeviceRow: View {
     }
 
     private var detail: String {
-        let can = device.receives && device.sends ? tr("Принимает и отправляет")
-            : device.receives ? tr("Принимает") : tr("Отправляет")
-        guard let seen = device.last_seen_at.flatMap(Self.parse) else {
-            return can + tr(" · ещё не подключался")
+        DeviceCard.doesLine(device) + Self.seen(device)
+    }
+
+    /// « · был онлайн 5 минут назад», or that it never connected.
+    static func seen(_ device: Device) -> String {
+        guard let seen = device.last_seen_at.flatMap(parse) else {
+            return tr(" · ещё не подключался")
         }
         let ago = RelativeDateTimeFormatter().localizedString(for: seen, relativeTo: Date())
-        return can + tr(" · был онлайн {ago}", ["ago": ago])
+        return tr(" · был онлайн {ago}", ["ago": ago])
     }
 
     private static func parse(_ text: String) -> Date? {

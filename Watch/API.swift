@@ -10,7 +10,11 @@ enum APIError: Error, Equatable {
     }
 
     /// The device was removed in «Устройства» (or its account deleted): sign in again.
-    var sessionGone: Bool { status == 401 || status == 403 }
+    var sessionGone: Bool { status == 401 }
+
+    /// The token works, but this is switched off in the watch's card for now
+    /// (sending, say): keep the token, it may be switched back on.
+    var switchedOff: Bool { status == 403 }
 }
 
 /// needed-server REST for a device. Everything here goes with the device

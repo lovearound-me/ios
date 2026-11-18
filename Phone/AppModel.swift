@@ -52,6 +52,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var devices: [Device] = []
     @Published private(set) var devicesLoaded = false
     @Published private(set) var devicesProblem: String?
+    /// The device cards open in «Игрушки», by id (a demo opens one itself).
+    @Published var toysPath: [String] = []
 
     @Published var tab: Tab = .hearts
     @Published var adding: Adding?
@@ -483,6 +485,43 @@ final class AppModel: ObservableObject {
             }
         }
         devices.removeAll { $0.id == device.id }
+        toysPath.removeAll { $0 == device.id }
+    }
+
+    /// Saves a change to a device and shows it as the server now has it;
+    /// false if it didn't take (a toast says so).
+    @discardableResult
+    func changeDevice(_ id: String, _ change: DeviceChange) async -> Bool {
+        guard let i = devices.firstIndex(where: { $0.id == id }) else { return false }
+        // Shown at once; put back if the server says no.
+        let before = devices[i]
+        devices[i] = change.applied(to: before)
+        if demo != nil {
+            return true
+        }
+        do {
+            let updated = try await api.updateDevice(id, change)
+            if let j = devices.firstIndex(where: { $0.id == id }) {
+                devices[j] = updated
+            }
+            return true
+        } catch let error as AuthError where error.endsSession {
+            signOut()
+        } catch {
+            if let j = devices.firstIndex(where: { $0.id == id }) {
+                devices[j] = before
+            }
+            show(tr("Не получилось сохранить"), failed: true)
+        }
+        return false
+    }
+
+    /// A board's new token, shown once; the old one stops working at once.
+    func newDeviceToken(_ device: Device) async throws -> String {
+        if demo != nil {
+            return "dev_demo_7Hq2kLx9WbN4sP0aZr4mT8vW3cJ6yQ1n"
+        }
+        return try await api.newDeviceToken(device.id)
     }
 
     func findPairing(_ code: String) async throws -> PairingCard {
@@ -635,6 +674,7 @@ final class AppModel: ObservableObject {
         loaded = false
         devices = []
         devicesLoaded = false
+        toysPath = []
         adding = nil
         tab = .hearts
     }

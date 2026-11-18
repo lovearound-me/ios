@@ -35,12 +35,12 @@ final class DemoUITests: XCTestCase {
 
     func testMyColor() {
         let app = XCUIApplication.russian(demo: "circles")
-        app.element("settings").tap()
-        let myColor = app.element("myColor")
-        XCTAssertTrue(myColor.waitForExistence(timeout: 5))
+        let myColor = app.openSettings(showing: "myColor")
         myColor.tap()
-        app.buttons["Голубой"].tap()
-        XCTAssertTrue(myColor.waitForExistence(timeout: 5))
+        let blue = app.buttons["Голубой"].firstMatch
+        XCTAssertTrue(blue.waitForExistence(timeout: 10))
+        blue.tap()
+        XCTAssertTrue(myColor.waitForExistence(timeout: 10))
     }
 
     func testSignOut() {
@@ -64,16 +64,28 @@ extension XCUIApplication {
         descendants(matching: .any).matching(identifier: id).firstMatch
     }
 
-    func signOut() {
+    /// Opens Settings and returns its button `id` once it's there.
+    /// CI's watch simulator is slow, and XCUITest gives the app only so long
+    /// to describe its screen: asked while the app still starts or the page
+    /// still slides in, it runs out, and a tap then is lost. So: wait for the
+    /// gear, let the slide finish, ask for buttons only, and tap again if the
+    /// page didn't come.
+    func openSettings(showing id: String) -> XCUIElement {
         // The toolbar item and its button both carry the identifier.
-        buttons["settings"].firstMatch.tap()
-        // CI's watch simulator is slow, and XCUITest gives the app only so
-        // long to describe its screen: asked for every element while the
-        // settings page still slides in, it once ran out. So: let the slide
-        // finish, then ask for buttons only.
-        Thread.sleep(forTimeInterval: 1.5)
-        let signOut = buttons["signOut"].firstMatch
-        XCTAssertTrue(signOut.waitForExistence(timeout: 10))
+        let gear = buttons["settings"].firstMatch
+        XCTAssertTrue(gear.waitForExistence(timeout: 20), "no settings button")
+        let target = buttons[id].firstMatch
+        for _ in 0..<3 {
+            if gear.exists { gear.tap() }
+            Thread.sleep(forTimeInterval: 1.5)
+            if target.waitForExistence(timeout: 10) { return target }
+        }
+        XCTFail("Settings didn't open")
+        return target
+    }
+
+    func signOut() {
+        let signOut = openSettings(showing: "signOut")
         // The settings page slides in: a tap during the slide is lost, so wait
         // until the button takes taps, and tap again if no alert came.
         // watchOS drops identifiers on alert buttons, and the settings list

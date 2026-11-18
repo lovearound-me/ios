@@ -117,10 +117,103 @@ final class PhoneDemoUITests: XCTestCase {
         let app = XCUIApplication.russian(demo: "home")
         XCTAssertTrue(app.element("anyone").waitForExistence(timeout: 10))
         app.open(URL(string: "lovearound://pair/482913")!)
+        // iOS 18 may ask first: «Открыть в “Love Around”?».
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for title in ["Открыть", "Open"] {
+            let open = springboard.buttons[title]
+            if open.waitForExistence(timeout: 2) {
+                open.tap()
+                break
+            }
+        }
         let code = app.element("pairCode")
         XCTAssertTrue(code.waitForExistence(timeout: 5))
         XCTAssertEqual(code.value as? String, "482913")
         XCTAssertTrue(app.element("confirmPairing").waitForExistence(timeout: 5))
+    }
+
+    /// A device's card: who can reach it. Quiet hours off shows at once in
+    /// the summary.
+    func testDeviceCardQuietHoursOff() {
+        let app = XCUIApplication.russian(demo: "toys")
+        app.openTab("Игрушки")
+        let lamp = app.element("device-d2")
+        XCTAssertTrue(lamp.waitForExistence(timeout: 5))
+        lamp.tap()
+        let who = app.element("deviceWho")
+        XCTAssertTrue(who.waitForExistence(timeout: 5))
+        XCTAssertTrue(who.label.contains("тихо 23:00–08:00"), who.label)
+        who.tap()
+        let quiet = app.switches["quietHours"]
+        XCTAssertTrue(quiet.waitForExistence(timeout: 5))
+        XCTAssertEqual(quiet.value as? String, "1")
+        XCTAssertTrue(app.element("quietFrom").exists)
+        let knob = quiet.switches.firstMatch
+        (knob.exists ? knob : quiet).tap()
+        XCTAssertEqual(quiet.value as? String, "0")
+        XCTAssertFalse(app.element("quietFrom").waitForExistence(timeout: 1))
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(who.waitForExistence(timeout: 5))
+        XCTAssertTrue(who.label.contains("круглые сутки"), who.label)
+    }
+
+    /// Everything off is fine: the device stays and does nothing.
+    func testDeviceCanDoNothing() {
+        let app = XCUIApplication.russian(demo: "toys")
+        app.openTab("Игрушки")
+        let watch = app.element("device-d1")
+        XCTAssertTrue(watch.waitForExistence(timeout: 5))
+        watch.tap()
+        let does = app.element("deviceDoes")
+        XCTAssertTrue(does.waitForExistence(timeout: 5))
+        does.tap()
+        for id in ["doesReceive", "doesSend"] {
+            let toggle = app.switches[id]
+            XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+            let knob = toggle.switches.firstMatch
+            (knob.exists ? knob : toggle).tap()
+            XCTAssertEqual(toggle.value as? String, "0", id)
+        }
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(does.waitForExistence(timeout: 5))
+        XCTAssertTrue(does.label.contains("Ничего не делает"), does.label)
+    }
+
+    /// A paired lamp asked only to receive: sending can't be switched on.
+    func testPairedDeviceKeepsToWhatItAskedFor() {
+        let app = XCUIApplication.russian(demo: "deviceDoes")
+        let send = app.switches["doesSend"]
+        XCTAssertTrue(send.waitForExistence(timeout: 10))
+        XCTAssertFalse(send.isEnabled)
+        XCTAssertTrue(app.switches["doesReceive"].isEnabled)
+    }
+
+    /// A board's new token: asked first, then shown once.
+    func testBoardGetsANewToken() {
+        let app = XCUIApplication.russian(demo: "deviceBoard")
+        let new = app.element("newToken")
+        XCTAssertTrue(new.waitForExistence(timeout: 10))
+        new.tap()
+        let issue = app.alerts.buttons["Выпустить"]
+        XCTAssertTrue(issue.waitForExistence(timeout: 5))
+        issue.tap()
+        XCTAssertTrue(app.element("newTokenValue").waitForExistence(timeout: 5))
+        app.element("tokenDone").tap()
+        XCTAssertTrue(new.waitForExistence(timeout: 5))
+    }
+
+    func testRenameDevice() {
+        let app = XCUIApplication.russian(demo: "deviceBoard")
+        let name = app.element("deviceName")
+        XCTAssertTrue(name.waitForExistence(timeout: 10))
+        name.tap()
+        let field = app.textFields["deviceNameField"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.clearAndType("Кнопка у кровати")
+        app.element("saveName").tap()
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        XCTAssertTrue(name.label.contains("Кнопка у кровати"), name.label)
     }
 
     func testSignOut() {
@@ -164,5 +257,15 @@ extension XCUIApplication {
         let confirm = alerts.buttons["Выйти"]
         XCTAssertTrue(confirm.waitForExistence(timeout: 5), "no «Выйти на этом iPhone?» alert")
         confirm.tap()
+    }
+}
+
+extension XCUIElement {
+    /// Replaces a text field's text.
+    func clearAndType(_ text: String) {
+        if let old = value as? String, !old.isEmpty {
+            typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
+        }
+        typeText(text)
     }
 }

@@ -33,6 +33,8 @@ final class AppModel: ObservableObject {
     // The people
     @Published private(set) var contacts: [Contact] = []
     @Published private(set) var loaded = false
+    /// Sending from this watch is switched off on the phone: no people to show.
+    @Published private(set) var sendingOff = false
     /// The circle that just sent, filled with a heart for a moment.
     @Published private(set) var justSent: String? = nil
     @Published private(set) var caption: String? = nil
@@ -181,6 +183,7 @@ final class AppModel: ObservableObject {
         session = nil
         contacts = []
         loaded = false
+        sendingOff = false
         self.notice = notice
         screen = .signIn
     }
@@ -192,8 +195,13 @@ final class AppModel: ObservableObject {
         do {
             contacts = try await API(token: session.token).contacts()
             loaded = true
+            sendingOff = false
         } catch let error as APIError where error.sessionGone {
             signOut(notice: tr("Часы отключены в «Устройствах». Войди снова."))
+        } catch let error as APIError where error.switchedOff {
+            contacts = []
+            loaded = true
+            sendingOff = true
         } catch {
             // Offline: keep what is on screen and try on the next refresh.
         }
@@ -224,6 +232,10 @@ final class AppModel: ObservableObject {
                 } catch let error as APIError where error.sessionGone {
                     signOut(notice: tr("Часы отключены в «Устройствах». Войди снова."))
                     return
+                } catch let error as APIError where error.switchedOff {
+                    sendingOff = true
+                    caption = tr("Отправка с часов выключена")
+                    justSent = nil
                 } catch APIError.status(429, _) where id == Self.anyoneID {
                     caption = tr("Кому-нибудь на свете уже улетело в этот час.")
                     justSent = nil

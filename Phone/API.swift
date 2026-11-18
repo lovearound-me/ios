@@ -5,12 +5,66 @@ import Foundation
 struct Device: Codable, Identifiable, Equatable {
     let id: String
     var kind: String?
-    let name: String
-    let capabilities: [String]
+    var name: String
+    var capabilities: [String]
     var last_seen_at: String?
+    /// What a device paired by code asked for: the most it may do. None for
+    /// a board made in an app, which may do anything and can get a new token.
+    var requested_capabilities: [String]? = nil
+    /// Whether it takes hearts from anyone in the world; none: as it asks.
+    var accept_anyone: Bool? = nil
+    var quiet_hours: QuietHours? = nil
 
     var receives: Bool { capabilities.contains("receive") }
     var sends: Bool { capabilities.contains("send") }
+    var paired: Bool { requested_capabilities != nil }
+
+    /// Whether `capability` may be switched on: anything for a board, only
+    /// what it asked for for a paired device.
+    func may(_ capability: String) -> Bool {
+        requested_capabilities?.contains(capability) ?? true
+    }
+}
+
+/// A daily window when a device gets no hearts at all, in the time zone of
+/// the phone that set it. The server keeps it; nothing is held for later.
+struct QuietHours: Codable, Equatable {
+    var from: String
+    var to: String
+    var tz: String
+}
+
+/// What changes on a device; nil fields stay as they are.
+struct DeviceChange {
+    var name: String?
+    var capabilities: [String]?
+    var acceptAnyone: Bool?
+    /// `.some(nil)` turns quiet hours off.
+    var quietHours: QuietHours??
+
+    var body: [String: Any] {
+        var body: [String: Any] = [:]
+        if let name { body["name"] = name }
+        if let capabilities { body["capabilities"] = capabilities }
+        if let acceptAnyone { body["accept_anyone"] = acceptAnyone }
+        if let quietHours {
+            if let hours = quietHours {
+                body["quiet_hours"] = ["from": hours.from, "to": hours.to, "tz": hours.tz]
+            } else {
+                body["quiet_hours"] = NSNull()
+            }
+        }
+        return body
+    }
+
+    func applied(to device: Device) -> Device {
+        var device = device
+        if let name { device.name = name }
+        if let capabilities { device.capabilities = capabilities }
+        if let acceptAnyone { device.accept_anyone = acceptAnyone }
+        if let quietHours { device.quiet_hours = quietHours }
+        return device
+    }
 }
 
 struct Me: Codable {
@@ -117,6 +171,17 @@ final class API {
 
     func deleteDevice(_ id: String) async throws {
         _ = try await request("DELETE", "v1/devices/\(id)")
+    }
+
+    /// The device as it is after the change.
+    func updateDevice(_ id: String, _ change: DeviceChange) async throws -> Device {
+        try decode(Device.self, try await request("PATCH", "v1/devices/\(id)", body: change.body))
+    }
+
+    /// A board's new token, shown only now; the old one stops working at once.
+    func newDeviceToken(_ id: String) async throws -> String {
+        struct Issued: Codable { let token: String }
+        return try decode(Issued.self, try await request("POST", "v1/devices/\(id)/token")).token
     }
 
     /// The card for six digits a device shows; 404 for a wrong or old code.

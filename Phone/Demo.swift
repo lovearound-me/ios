@@ -7,7 +7,8 @@ struct Demo {
     let name: String
 
     static let names = ["signin", "home", "sent", "anyone", "empty", "signal", "paused",
-                        "book", "contact", "add", "toys", "board", "pair", "settings"]
+                        "book", "contact", "add", "toys", "board", "pair", "device", "deviceWho",
+                        "deviceDoes", "deviceBoard", "settings"]
 
     static func fromArguments() -> Demo? {
         let args = ProcessInfo.processInfo.arguments
@@ -44,9 +45,12 @@ struct Demo {
 
     static let devices: [Device] = [
         Device(id: "d1", kind: "watch", name: "Apple Watch", capabilities: ["receive", "send"],
-               last_seen_at: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-300))),
+               last_seen_at: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-300)),
+               requested_capabilities: ["receive", "send"]),
         Device(id: "d2", kind: "lamp", name: "Котик на полке", capabilities: ["receive"],
-               last_seen_at: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-7200))),
+               last_seen_at: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-7200)),
+               requested_capabilities: ["receive"], accept_anyone: true,
+               quiet_hours: QuietHours(from: "23:00", to: "08:00", tz: TimeZone.current.identifier)),
         Device(id: "d3", kind: "custom", name: "Кнопка на столе", capabilities: ["send"], last_seen_at: nil),
     ]
 
@@ -76,6 +80,12 @@ struct Demo {
             model.demoSet(signedIn: true, contacts: people, tab: .book)
         case "toys", "board", "pair":
             model.demoSet(signedIn: true, contacts: people, devices: Demo.devices, tab: .toys)
+        case "device", "deviceWho", "deviceDoes":
+            model.demoSet(signedIn: true, contacts: people, devices: Demo.devices, tab: .toys)
+            model.toysPath = ["d2"] + (name == "deviceWho" ? [DeviceCard.who("d2")] : name == "deviceDoes" ? [DeviceCard.does("d2")] : [])
+        case "deviceBoard":
+            model.demoSet(signedIn: true, contacts: people, devices: Demo.devices, tab: .toys)
+            model.toysPath = ["d3"]
         case "settings":
             model.demoSet(signedIn: true, contacts: people, tab: .settings)
         default:

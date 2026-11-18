@@ -23,7 +23,13 @@ struct MainView: View {
                             }
                         }
                     }
-                    if model.loaded && model.contacts.isEmpty {
+                    if model.sendingOff {
+                        Text(tr("Отправка с часов выключена"))
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .accessibilityIdentifier("sendingOff")
+                    } else if model.loaded && model.contacts.isEmpty {
                         EmptyHint()
                     }
                 }
