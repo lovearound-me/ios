@@ -45,14 +45,21 @@ final class PhoneDemoUITests: XCTestCase {
     func testOwnLinkIsRefused() {
         let app = XCUIApplication.russian(demo: "home")
         app.element("addByLink").tap()
+        // The name first: with it empty «Добавить» is off anyway.
+        let name = app.element("newName")
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        name.typeText("Я")
+        XCTAssertEqual(name.value as? String, "Я")
         let link = app.element("inviteLink")
-        XCTAssertTrue(link.waitForExistence(timeout: 5))
         link.tap()
         link.typeText("https://lovearound.me/i/GSSV7-A33HN")
-        app.element("newName").tap()
-        app.element("newName").typeText("Я")
-        XCTAssertTrue(app.staticTexts["Это твоя собственная ссылка"].exists)
-        XCTAssertFalse(app.element("addContact").isEnabled)
+        XCTAssertTrue(app.staticTexts["Это твоя собственная ссылка"].waitForExistence(timeout: 3))
+        // iOS 26 reports a greyed-out toolbar button as enabled: tap it and
+        // see that nothing happens instead.
+        app.element("addContact").tap()
+        XCTAssertTrue(link.waitForExistence(timeout: 2), "the sheet closed")
+        XCTAssertFalse(app.buttons["Я"].exists)
     }
 
     func testBookMakesSomeoneClose() {

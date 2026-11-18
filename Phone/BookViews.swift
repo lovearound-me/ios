@@ -329,7 +329,8 @@ struct AddContactView: View {
         .scrollContentBackground(.hidden)
         .background(Theme.paper)
         .navigationTitle(tr("Добавить по ссылке"))
-        .navigationBarTitleDisplayMode(.inline)
+        // Inline, it is cut to «Добавить п…» between the two buttons.
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(tr("Отмена")) { dismiss() }

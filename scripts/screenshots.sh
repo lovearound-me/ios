@@ -26,7 +26,7 @@ esac
 # The newest runtime, and the device to show: the biggest plain Apple Watch,
 # or the iPhone Pro (not Max, Plus or SE): the size most people hold.
 read -r runtime device < <(xcrun simctl list runtimes -j | OS=$os python3 -c '
-import json, os, sys
+import json, os, re, sys
 want = os.environ["OS"]
 # com.apple.CoreSimulator.SimRuntime.iOS-18-2, ….watchOS-11-2
 runtimes = [r for r in json.load(sys.stdin)["runtimes"]
@@ -35,12 +35,16 @@ if not runtimes:
     sys.exit("no " + want + " simulator runtime")
 r = runtimes[-1]
 kinds = r.get("supportedDeviceTypes", [])
+# Not listed newest last: the newest is the one with the biggest number
+# («iPhone 17 Pro», «Apple Watch Series 11 (46mm)»).
+def newest(kinds):
+    return max(kinds, key=lambda d: int((re.findall(r"\d+", d["name"]) or ["0"])[0]))
 if want == "watchOS":
     kinds = [d for d in kinds if "Apple Watch" in d["name"]]
-    best = ([d for d in kinds if "Ultra" not in d["name"] and ("46mm" in d["name"] or "45mm" in d["name"])] or kinds)[-1]
+    best = newest([d for d in kinds if "Series" in d["name"] and ("46mm" in d["name"] or "45mm" in d["name"])] or kinds)
 else:
     kinds = [d for d in kinds if d["name"].startswith("iPhone")]
-    best = ([d for d in kinds if d["name"].endswith(" Pro")] or kinds)[-1]
+    best = newest([d for d in kinds if d["name"].endswith(" Pro")] or kinds)
 print(r["identifier"], best["identifier"])
 ')
 

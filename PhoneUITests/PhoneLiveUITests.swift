@@ -27,12 +27,15 @@ final class PhoneLiveUITests: XCTestCase {
         XCTAssertTrue(circle.waitForExistence(timeout: 30), "no circle for \(person): the book didn't load")
         add(XCTAttachment(screenshot: app.screenshot()))
         circle.tap()
+        let sent = "\(person) — улетело ♥"
         let toast = app.element("toast")
         XCTAssertTrue(toast.waitForExistence(timeout: 3))
-        // «Улетело» shows at once; a failure replaces it when the server answers.
-        Thread.sleep(forTimeInterval: 1.5)
         add(XCTAttachment(screenshot: app.screenshot()))
-        XCTAssertEqual(toast.label, "\(person) — улетело ♥")
+        // «Улетело» shows at once and for 2.5 s; if the server says no, a
+        // red toast replaces it. Watch for one a while.
+        let failed = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == 'toast' AND label != %@", sent)).firstMatch
+        XCTAssertFalse(failed.waitForExistence(timeout: 4), "the server didn't take the heart")
 
         app.openTab("Книга")
         XCTAssertTrue(app.element("send-\(person)").waitForExistence(timeout: 5))

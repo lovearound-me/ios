@@ -136,6 +136,8 @@ struct AnyoneHeart: View {
                     .font(.system(size: 14))
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
+                    // Two lines either way, so the circles don't jump up after a tap.
+                    .lineLimit(2, reservesSpace: true)
                     .frame(maxWidth: 290)
                     .accessibilityIdentifier("anyoneNote")
             }

@@ -65,7 +65,7 @@ struct Demo {
         case "empty":
             model.demoSet(signedIn: true, contacts: [])
         case "paused":
-            model.demoSet(signedIn: true, contacts: people, tab: .settings, pausedUntil: .distantFuture)
+            model.demoSet(signedIn: true, contacts: people, pausedUntil: .distantFuture)
         case "signal":
             model.demoSet(signedIn: true, contacts: people)
             Task { @MainActor in
