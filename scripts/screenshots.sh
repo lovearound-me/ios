@@ -1,26 +1,46 @@
 #!/bin/bash
-# Every screen of the watch app, from a watchOS simulator, in Russian and English.
-# The app draws each one from made-up data when launched with `--demo <name>`
-# (Watch/Demo.swift), so nothing here signs in or reaches the server.
+# Every screen of the watch or the iPhone app, from a simulator, in Russian
+# and English. The app draws each one from made-up data when launched with
+# `--demo <name>` (Watch/Demo.swift, Phone/Demo.swift), so nothing here signs
+# in or reaches the server. Which app it is comes from where it was built.
 #
-#   scripts/screenshots.sh build/Build/Products/Debug-watchsimulator/LoveAround.app shots
+#   scripts/screenshots.sh build/Build/Products/Debug-watchsimulator/LoveAround.app shots/watch
+#   scripts/screenshots.sh build/Build/Products/Debug-iphonesimulator/LoveAround.app shots/phone
 set -euo pipefail
 
 app=$1
 out=${2:-shots}
-bundle=me.lovearound.ios.watchkitapp
-screens="signin exists code expired computer connected circles sent anyone empty signal settings colors delete"
+case "$app" in
+    *iphonesimulator*)
+        bundle=me.lovearound.ios
+        os=iOS
+        screens="signin home sent anyone empty signal paused book contact add toys board pair settings"
+        ;;
+    *)
+        bundle=me.lovearound.ios.watchkitapp
+        os=watchOS
+        screens="signin exists code expired computer connected circles sent anyone empty signal settings colors delete"
+        ;;
+esac
 
-# The newest watchOS runtime, and the biggest Apple Watch it runs.
-read -r runtime device < <(xcrun simctl list runtimes -j | python3 -c '
-import json, sys
+# The newest runtime, and the device to show: the biggest plain Apple Watch,
+# or the iPhone Pro (not Max, Plus or SE): the size most people hold.
+read -r runtime device < <(xcrun simctl list runtimes -j | OS=$os python3 -c '
+import json, os, sys
+want = os.environ["OS"]
+# com.apple.CoreSimulator.SimRuntime.iOS-18-2, ….watchOS-11-2
 runtimes = [r for r in json.load(sys.stdin)["runtimes"]
-            if "watchOS" in r["identifier"] and r.get("isAvailable")]
+            if r["identifier"].split(".")[-1].startswith(want + "-") and r.get("isAvailable")]
 if not runtimes:
-    sys.exit("no watchOS simulator runtime")
+    sys.exit("no " + want + " simulator runtime")
 r = runtimes[-1]
-kinds = [d for d in r.get("supportedDeviceTypes", []) if "Apple Watch" in d["name"]]
-best = ([d for d in kinds if "Ultra" not in d["name"] and ("46mm" in d["name"] or "45mm" in d["name"])] or kinds)[-1]
+kinds = r.get("supportedDeviceTypes", [])
+if want == "watchOS":
+    kinds = [d for d in kinds if "Apple Watch" in d["name"]]
+    best = ([d for d in kinds if "Ultra" not in d["name"] and ("46mm" in d["name"] or "45mm" in d["name"])] or kinds)[-1]
+else:
+    kinds = [d for d in kinds if d["name"].startswith("iPhone")]
+    best = ([d for d in kinds if d["name"].endswith(" Pro")] or kinds)[-1]
 print(r["identifier"], best["identifier"])
 ')
 

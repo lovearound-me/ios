@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Draws the watch app's icon: the warm gradient of the Mac and Linux icons
-up to the edges (watchOS cuts it to a circle) and the same white heart.
+"""Draws the app's icon: the warm gradient of the Mac and Linux icons up to
+the edges (watchOS cuts it to a circle, iOS rounds the corners) and the same
+white heart. One picture for the watch and the iPhone.
 
-    python3 scripts/make-icon.py    # writes Watch/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+    python3 scripts/make-icon.py    # writes {Watch,Phone}/Assets.xcassets/AppIcon.appiconset/AppIcon.png
 
 Needs pycairo and Pillow. The heart is linux/lovearound/icons.py's.
 """
@@ -13,7 +14,7 @@ import cairo
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "Watch", "Assets.xcassets", "AppIcon.appiconset", "AppIcon.png")
+OUTS = [os.path.join(ROOT, app, "Assets.xcassets", "AppIcon.appiconset", "AppIcon.png") for app in ("Watch", "Phone")]
 PX = 1024
 
 
@@ -43,6 +44,8 @@ cr.fill()
 png = io.BytesIO()
 surface.write_to_png(png)
 png.seek(0)
-os.makedirs(os.path.dirname(OUT), exist_ok=True)
-Image.open(png).convert("RGB").save(OUT)
-print(OUT)
+icon = Image.open(png).convert("RGB")
+for out in OUTS:
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    icon.save(out)
+    print(out)

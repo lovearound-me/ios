@@ -4,18 +4,22 @@ import Foundation
 import Security
 
 /// «Войти через Apple» without the Firebase SDK: Apple's identity token is
-/// traded for a Firebase ID token over Identity Toolkit REST, used for one or
-/// two calls, then dropped. The device keeps only its own device token.
+/// traded for a Firebase session over Identity Toolkit REST. The watch uses
+/// the ID token for one or two calls and keeps only its own device token;
+/// the iPhone keeps the refresh token, as the Mac app does.
 enum AppleSignIn {
     struct FirebaseUser {
         let idToken: String
         let email: String?
+        let uid: String
+        let refreshToken: String
     }
 
     enum Failure: Error {
         /// The email already has an account made another way (Google, email):
         /// Firebase won't join them here, the code sign-in does.
         case emailExists
+        case network
         case failed
     }
 
@@ -58,7 +62,7 @@ enum AppleSignIn {
             data = body
             status = (resp as? HTTPURLResponse)?.statusCode ?? 0
         } catch {
-            throw APIError.network
+            throw Failure.network
         }
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         if status != 200 {
@@ -69,6 +73,8 @@ enum AppleSignIn {
             throw Failure.emailExists
         }
         guard let idToken = json["idToken"] as? String else { throw Failure.failed }
-        return FirebaseUser(idToken: idToken, email: json["email"] as? String)
+        return FirebaseUser(idToken: idToken, email: json["email"] as? String,
+                            uid: json["localId"] as? String ?? "",
+                            refreshToken: json["refreshToken"] as? String ?? "")
     }
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Checks the dictionaries against the watch app: every text it passes to
-tr()/trn() is in every language, and nothing is left that it doesn't use.
+"""Checks the dictionaries against the apps (the watch and the iPhone share
+them): every text they pass to tr()/trn() is in every language, and nothing
+is left that neither uses.
 
     python3 scripts/check-i18n.py         # what is missing or unused, per language
     python3 scripts/check-i18n.py --keys  # every key the app uses, with where
@@ -54,7 +55,7 @@ def source_keys(path, ext):
 
 def used():
     keys = {}
-    dirs = [("Shared", ".swift"), ("Watch", ".swift")]
+    dirs = [("Shared", ".swift"), ("Watch", ".swift"), ("Phone", ".swift")]
     for folder, ext in dirs:
         for base, _, files in os.walk(os.path.join(ROOT, folder)):
             for name in sorted(files):

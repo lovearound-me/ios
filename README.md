@@ -1,13 +1,34 @@
-# Love Around for Apple Watch (and, later, iPhone)
+# Love Around for iPhone and Apple Watch
 
-Tap a circle on your wrist, and someone you're thinking of gets a bare
-"someone is thinking of you": no name, no message. When someone thinks of you,
-the watch taps your wrist, the screen edges glow in your color and hearts,
-cats and flowers float up. You never learn who it was.
+Tap a circle on your phone or your wrist, and someone you're thinking of gets
+a bare "someone is thinking of you": no name, no message. When someone thinks
+of you, the screen edges glow in your color and hearts, cats and flowers
+float up. You never learn who it was.
 
-Status: being built, not in the App Store yet. Receiving signals still needs
-Apple push on the server: watchOS doesn't let ordinary apps keep a WebSocket
-open ([TN3135](https://developer.apple.com/documentation/technotes/tn3135-low-level-networking-on-watchos)).
+Status: being built, not in the App Store yet. The iPhone app gets signals
+while it is open (the server's WebSocket, as the Mac app); in the background,
+and on the watch at all, it takes Apple push on the server: watchOS doesn't
+let ordinary apps keep a WebSocket open ([TN3135](https://developer.apple.com/documentation/technotes/tn3135-low-level-networking-on-watchos)).
+
+## The iPhone app
+
+- **Sign in** with Apple right in the app, or with Google or an email on
+  lovearound.me/signin in Safari, which hands the session back to the app
+  (`lovearound://signin`, sealed to a one-time key of the app, as for the Mac
+  app). The app keeps the Firebase refresh token in the Keychain.
+- **«Сердечки»** (variant Б of the mockups): a big heart for «Кому-нибудь на
+  свете» (once an hour), the close people in circles three to a row, then
+  «Вся книга». A tap sends.
+- **«Книга»**: «Рядом» in its order (drag to change it), the others; a
+  person's card: name, color, «Рядом», their Love ID, removing. «+» adds by
+  a Love ID link, also from `lovearound://add/<code>`.
+- **«Игрушки»**: the account's devices; connect one by the six digits on its
+  screen (a watch, a lamp), or make a token for a board of one's own. Toys
+  over Bluetooth come later.
+- **«Настройки»**: my color, hearts from anyone, pause, my Love ID, how the
+  account signs in, sign out, delete the account.
+
+## The watch app
 
 ## What it does
 
@@ -32,14 +53,17 @@ API docs: [lovearound.me/docs](https://lovearound.me/docs).
 
 | Folder | What |
 |---|---|
-| `Shared/` | API client, Keychain, Apple sign-in through Firebase's REST API (no Firebase SDK), palette, strings. For the iPhone app too. |
-| `Watch/` | The watch app (SwiftUI, watchOS 10+), `Demo.swift` for screenshots |
-| `i18n/` | One dictionary per language, keyed by the Russian text |
-| `Watch/Assets.xcassets` | The icon, drawn by `scripts/make-icon.py` (the Mac and Linux icon's gradient and heart, full-bleed: watchOS cuts it to a circle) |
+| `Shared/` | For both apps: contacts, Keychain, Apple sign-in through Firebase's REST API (no Firebase SDK), palette, strings, the app mark |
+| `Phone/` | The iPhone app (SwiftUI, iOS 17+): Firebase sign-in, the API and WebSocket clients ported from the Mac app, `Demo.swift` for screenshots |
+| `Watch/` | The watch app (SwiftUI, watchOS 10+), its device-token API client, `Demo.swift` |
+| `PhoneUITests/`, `WatchUITests/` | UI tests: on made-up data (CI) and against the server (on a Mac) |
+| `i18n/` | One dictionary per language, keyed by the Russian text, for both apps |
+| `*/Assets.xcassets` | The icon, drawn by `scripts/make-icon.py` (the Mac and Linux icon's gradient and heart, full-bleed: watchOS cuts it to a circle, iOS rounds it) |
 | `project.yml` | [XcodeGen](https://github.com/yonaskolb/XcodeGen) spec: the `.xcodeproj` is generated, not kept |
 
-Bundle id `me.lovearound.ios.watchkitapp`, a watch-only app for now; the
-iPhone app will be `me.lovearound.ios`, with the watch app under it. The QR
+Bundle ids: the iPhone app `me.lovearound.ios`, the watch app
+`me.lovearound.ios.watchkitapp`, which travels inside it (one App Store
+record) and also runs without an iPhone app installed. The QR
 code comes from [swift-qrcode-generator](https://github.com/fwcd/swift-qrcode-generator)
 (watchOS has no Core Image QR filter).
 
@@ -51,26 +75,35 @@ On a Mac with Xcode 16+:
     xcodegen generate
     open LoveAround.xcodeproj
 
-GitHub Actions (`.github/workflows/build.yml`) builds for the simulator on
-every push and takes a screenshot of every screen in Russian and English
-(artifact `screenshots`). Locally:
+GitHub Actions (`.github/workflows/build.yml`) builds both apps for the
+simulator on every push, runs the UI tests on made-up data and takes a
+screenshot of every screen in Russian and English (artifact `screenshots`).
+Locally, the iPhone app (the scheme `LoveAround` builds the watch app inside
+it; `LoveAroundWatch` builds the watch app alone):
 
-    xcodebuild -project LoveAround.xcodeproj -scheme LoveAroundWatch \
-      -destination 'generic/platform=watchOS Simulator' \
+    xcodebuild -project LoveAround.xcodeproj -scheme LoveAround \
+      -destination 'generic/platform=iOS Simulator' \
       -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
-    scripts/screenshots.sh build/Build/Products/Debug-watchsimulator/LoveAround.app shots
+    scripts/screenshots.sh build/Build/Products/Debug-iphonesimulator/LoveAround.app shots/phone
+    scripts/screenshots.sh build/Build/Products/Debug-watchsimulator/LoveAround.app shots/watch
 
-UI tests tap through the app in a simulator. `DemoUITests` (made-up data)
-run in CI; `LiveUITests` signs in by code against the real server, sends one
-heart and signs out, on a Mac only (see the file for how):
+UI tests tap through the apps in a simulator. `PhoneDemoUITests` and
+`DemoUITests` (made-up data) run in CI. On a Mac only, against the real
+server (see the files for how): `PhoneLiveUITests` opens the test account
+with a one-hour ID token, sends one heart and signs out; `LiveUITests` signs
+the watch in by code, sends one heart and signs out.
 
+    xcodebuild test -project LoveAround.xcodeproj -scheme LoveAround \
+      -destination 'platform=iOS Simulator,name=<an iPhone>' \
+      -only-testing:LoveAroundUITests/PhoneDemoUITests
     xcodebuild test -project LoveAround.xcodeproj -scheme LoveAroundWatch \
       -destination 'platform=watchOS Simulator,name=<a watch>' \
       -only-testing:LoveAroundWatchUITests/DemoUITests
 
-`--demo <name>` draws one screen from made-up data, without signing in:
-`signin exists code expired computer connected circles sent anyone empty
-signal settings colors delete`.
+`--demo <name>` draws one screen from made-up data, without signing in. On
+the iPhone: `signin home sent anyone empty signal paused book contact add
+toys board pair settings`; on the watch: `signin exists code expired computer
+connected circles sent anyone empty signal settings colors delete`.
 
 ## Translations
 
@@ -84,9 +117,10 @@ dictionaries, so the same thing reads the same everywhere: «Кому-нибуд
 
 ## Privacy
 
-A signal carries no sender. The app sends only what the API needs; it keeps
-the device token and the account's email on the watch, my color in
-`UserDefaults`, and nothing else. See [lovearound.me/privacy](https://lovearound.me/privacy).
+A signal carries no sender. The apps send only what the API needs. The
+iPhone keeps the account's Firebase refresh token in its Keychain, and my
+color, the pause and when it last sent to whom in `UserDefaults`; the watch
+keeps its device token and the account's email, and my color. Nothing else. See [lovearound.me/privacy](https://lovearound.me/privacy).
 
 ## License
 

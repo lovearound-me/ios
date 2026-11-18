@@ -9,6 +9,15 @@ enum Config {
     static let pairingPage = "lovearound.me/login/devices"
     /// The web app, where people add others and manage devices.
     static let webApp = "app.lovearound.me"
+    /// The site: invite links /i/<code>, the Google sign-in bridge /signin/, docs.
+    static let site = "https://lovearound.me"
+    /// Links the iPhone app opens: lovearound://add/<code>, lovearound://signin?….
+    static let urlScheme = "lovearound"
+    #if os(watchOS)
+    private static let platform = "watch"
+    #else
+    private static let platform = "ios"
+    #endif
     /// Sent as `X-Client` with every request, so the server logs which version sent what.
-    static let client = "watch/" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")
+    static let client = platform + "/" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")
 }

@@ -4,3 +4,6 @@ shots/
 DerivedData/
 __pycache__/
 .DS_Store
+# Written by xcodegen from project.yml.
+*/Info.plist
+*.entitlements

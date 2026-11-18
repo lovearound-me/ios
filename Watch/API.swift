@@ -1,19 +1,5 @@
 import Foundation
 
-/// A person in the address book, as the server gives it to a device.
-struct Contact: Codable, Identifiable, Equatable {
-    /// The server's id for this entry; the person's own id never leaves it.
-    let id: String
-    var label: String
-    var position: Int
-    /// A close person: a circle first. Optional: older servers leave it out.
-    var close: Bool?
-    /// The owner's color for them, an index into `Palette`.
-    var color: Int?
-
-    var isClose: Bool { close ?? false }
-}
-
 enum APIError: Error, Equatable {
     case status(Int, String)
     case network

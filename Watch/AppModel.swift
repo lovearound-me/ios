@@ -92,7 +92,7 @@ final class AppModel: ObservableObject {
                 signedIn(try await API.createDevice(firebaseToken: user.idToken, email: user.email), welcome: true)
             } catch AppleSignIn.Failure.emailExists {
                 screen = .emailExists
-            } catch APIError.network {
+            } catch AppleSignIn.Failure.network {
                 notice = tr("Нет связи, проверь интернет")
             } catch {
                 notice = tr("Не получилось войти. Попробуй ещё раз.")
@@ -280,7 +280,7 @@ final class AppModel: ObservableObject {
             } catch AppleSignIn.Failure.emailExists {
                 notice = tr("Это другой аккаунт. Удалить этот можно на {site} → Настройки → Аккаунт.",
                             ["site": Config.webApp])
-            } catch APIError.network {
+            } catch AppleSignIn.Failure.network {
                 notice = tr("Нет связи, проверь интернет")
             } catch {
                 notice = tr("Не получилось. Попробуй ещё раз.")
