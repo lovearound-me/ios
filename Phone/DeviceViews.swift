@@ -35,7 +35,13 @@ struct DeviceCard: View {
             }
         }
         .background(Theme.paper)
+        // The name is the back button's on the card's pages («‹ Котик на
+        // полке»); the card itself shows it big, so not in the bar too.
+        .navigationTitle(device?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) { Text(verbatim: "") }
+        }
     }
 
     private func card(_ device: Device) -> some View {
