@@ -1,0 +1,64 @@
+# XcodeGen spec: `xcodegen generate` makes LoveAround.xcodeproj (not kept in git).
+# Built only in GitHub Actions (.github/workflows/build.yml): there is no Mac here.
+#
+# Bundle IDs leave room for the iPhone app: it will be me.lovearound.ios, and
+# the watch app, already under it, will become its companion in the same
+# App Store record.
+name: LoveAround
+
+options:
+  bundleIdPrefix: me.lovearound
+  deploymentTarget:
+    watchOS: "10.0"
+  createIntermediateGroups: true
+
+packages:
+  QRCodeGenerator:
+    url: https://github.com/fwcd/swift-qrcode-generator
+    from: 2.0.0
+
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: CY8GRX7426
+    SWIFT_VERSION: "5.0"
+
+targets:
+  LoveAroundWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: Shared
+      - path: Watch
+      - path: i18n
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: QRCodeGenerator
+    info:
+      path: Watch/Info.plist
+      properties:
+        CFBundleDisplayName: Love Around
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        WKApplication: true
+        WKWatchOnly: true
+    entitlements:
+      path: Watch/LoveAround.entitlements
+      properties:
+        com.apple.developer.applesignin: [Default]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.watchkitapp
+        PRODUCT_NAME: LoveAround
+        TARGETED_DEVICE_FAMILY: "4"
+        GENERATE_INFOPLIST_FILE: NO
+
+schemes:
+  LoveAroundWatch:
+    build:
+      targets:
+        LoveAroundWatch: all
+    run:
+      config: Debug

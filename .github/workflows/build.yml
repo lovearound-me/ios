@@ -1,0 +1,53 @@
+# Builds the watch app for the simulator and takes a screenshot of every
+# screen (artifact "screenshots"). No signing, nothing is uploaded to Apple.
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  watch:
+    runs-on: macos-15
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Translations
+        run: python3 scripts/check-i18n.py
+
+      - name: Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild -version
+
+      - name: watchOS simulator
+        run: |
+          xcrun simctl list runtimes | grep -q watchOS || xcodebuild -downloadPlatform watchOS
+          xcrun simctl list runtimes | grep watchOS
+
+      - name: Build
+        run: |
+          xcodebuild -project LoveAround.xcodeproj -scheme LoveAroundWatch \
+            -destination 'generic/platform=watchOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO -quiet build
+
+      - name: Screenshots
+        run: scripts/screenshots.sh build/Build/Products/Debug-watchsimulator/LoveAround.app shots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots
+          if-no-files-found: ignore
