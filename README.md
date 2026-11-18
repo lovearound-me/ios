@@ -35,6 +35,7 @@ API docs: [lovearound.me/docs](https://lovearound.me/docs).
 | `Shared/` | API client, Keychain, Apple sign-in through Firebase's REST API (no Firebase SDK), palette, strings. For the iPhone app too. |
 | `Watch/` | The watch app (SwiftUI, watchOS 10+), `Demo.swift` for screenshots |
 | `i18n/` | One dictionary per language, keyed by the Russian text |
+| `Watch/Assets.xcassets` | The icon, drawn by `scripts/make-icon.py` (the Mac and Linux icon's gradient and heart, full-bleed: watchOS cuts it to a circle) |
 | `project.yml` | [XcodeGen](https://github.com/yonaskolb/XcodeGen) spec: the `.xcodeproj` is generated, not kept |
 
 Bundle id `me.lovearound.ios.watchkitapp`, a watch-only app for now; the
