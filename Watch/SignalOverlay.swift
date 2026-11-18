@@ -48,6 +48,9 @@ struct SignalOverlay: View {
                         .font(.system(size: 16, weight: .semibold))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
+                        // Stays readable when an emoji floats behind it.
+                        .shadow(color: .black, radius: 3)
+                        .shadow(color: .black, radius: 3)
                 }
             }
         }

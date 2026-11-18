@@ -14,7 +14,6 @@ struct LoveAroundApp: App {
                 }
             }
             .environmentObject(model)
-            .tint(Palette.link)
         }
     }
 }

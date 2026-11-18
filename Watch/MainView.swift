@@ -22,19 +22,25 @@ struct MainView: View {
                             }
                         }
                     }
-                    if let caption = model.caption {
-                        Text(caption)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Palette.muted)
-                            .multilineTextAlignment(.center)
-                    }
                     if model.loaded && model.contacts.isEmpty {
                         EmptyHint()
                     }
                 }
                 .padding(.horizontal, 2)
             }
-            .navigationTitle("Love Around")
+            // What just happened, over the bottom edge: seen wherever the list is scrolled.
+            .overlay(alignment: .bottom) {
+                if let caption = model.caption {
+                    Text(caption)
+                        .font(.system(size: 13, weight: .medium))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(Color(white: 0.17), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.easeOut(duration: 0.2), value: model.caption)
             .navigationDestination(isPresented: $showSettings) { SettingsView() }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

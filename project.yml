@@ -40,6 +40,9 @@ targets:
       path: Watch/Info.plist
       properties:
         CFBundleDisplayName: Love Around
+        # The site's languages: system parts (the Apple button, alerts) follow them too.
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, es, pt, de, fr, it, pl, tr, uk, ru, id, ko, zh]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         WKApplication: true

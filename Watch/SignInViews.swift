@@ -35,11 +35,7 @@ struct SignInView: View {
                     .signInWithAppleButtonStyle(.white)
                     .frame(height: 40)
                     .padding(.top, 8)
-                Button {
-                    model.startCode()
-                } label: {
-                    Label(tr("Войти по коду"), systemImage: "textformat.123")
-                }
+                Button(tr("Войти по коду")) { model.startCode() }
                 if let notice = model.notice {
                     Text(notice)
                         .font(.footnote)
@@ -48,6 +44,7 @@ struct SignInView: View {
                         .padding(.top, 4)
                 }
             }
+            .tint(Palette.link)
         }
         .disabled(model.busy)
         .overlay { if model.busy { ProgressView() } }
@@ -79,6 +76,7 @@ struct EmailExistsView: View {
                     .foregroundStyle(Palette.muted)
                     .padding(.top, 2)
             }
+            .tint(Palette.link)
         }
     }
 }
@@ -129,6 +127,7 @@ struct CodeView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
+                .tint(Palette.link)
             }
             .navigationTitle(tr("По коду"))
             .navigationDestination(isPresented: $showComputer) {
