@@ -15,12 +15,13 @@ iPhone's receiving off.
 
 ## The iPhone app
 
-- **Sign in** with Apple right in the app, or with Google or an email on
-  lovearound.me/signin, opened in the system's sign-in sheet over the app
-  (`ASWebAuthenticationSession`; the App Store doesn't take a sign-in that
-  leaves for Safari). The page hands the session back to the app
-  (`lovearound://signin`, sealed to a one-time key of the app, as for the Mac
-  app). The app keeps the Firebase refresh token in the Keychain.
+- **Sign in**, all of it in the app: Apple's button; Google's own sign-in
+  library (GoogleSignIn: Google's account chooser over the app, its ID token
+  traded for a Firebase session; the client is the iPhone app's in Firebase,
+  `GIDClientID` in Info.plist); or an email and a password in a form that
+  signs in or makes the account, with «Забыли пароль?», as on the site. One
+  account per email: an email whose account was made another way is told to
+  sign in that way. The app keeps the Firebase refresh token in the Keychain.
 - **Notifications** are asked for once after signing in, after a screen of
   ours that says what they are for; «Не сейчас» leaves it to Settings.
 - **«Сердечки»** (variant Б of the mockups): a big heart for «Кому-нибудь на
@@ -75,7 +76,7 @@ API docs: [lovearound.me/docs](https://lovearound.me/docs).
 | Folder | What |
 |---|---|
 | `Shared/` | For both apps: contacts, Keychain, Apple sign-in through Firebase's REST API (no Firebase SDK), palette, strings, the app mark |
-| `Phone/` | The iPhone app (SwiftUI, iOS 17+): Firebase sign-in, the API and WebSocket clients ported from the Mac app, `Demo.swift` for screenshots |
+| `Phone/` | The iPhone app (SwiftUI, iOS 17+): Firebase sign-in (Apple, Google, email), the API and WebSocket clients ported from the Mac app, `Demo.swift` for screenshots |
 | `Watch/` | The watch app (SwiftUI, watchOS 10+), its device-token API client, `Demo.swift` |
 | `PhoneUITests/`, `WatchUITests/` | UI tests: on made-up data (CI) and against the server (on a Mac) |
 | `i18n/` | One dictionary per language, keyed by the Russian text, for both apps |
