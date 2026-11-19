@@ -38,24 +38,28 @@ struct SignalOverlay: View {
                 }
                 VStack(spacing: 12) {
                     Image(systemName: "heart.fill")
-                        .font(.system(size: 110))
+                        .font(.app(110))
                         .foregroundStyle(color)
                         .symbolEffect(.bounce, value: bright)
                     Text(tr("Кто-то думает о тебе"))
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.app(28, weight: .bold))
                         .foregroundStyle(Theme.ink)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
-                        // Stays readable when an emoji floats behind it.
-                        .background(Theme.paper.opacity(0.6).blur(radius: 12))
                     Text(tr("только что"))
-                        .font(.system(size: 15))
+                        .font(.app(15))
                         .foregroundStyle(Theme.muted)
+                }
+                // The emoji pass behind the heart and the words, not over them.
+                .background {
+                    RadialGradient(colors: [Theme.paper, Theme.paper.opacity(0.92), Theme.paper.opacity(0)],
+                                   center: .center, startRadius: 0, endRadius: 210)
+                        .frame(width: 420, height: 420)
                 }
                 VStack {
                     Spacer()
                     Text(tr("Нажми, чтобы закрыть"))
-                        .font(.system(size: 13))
+                        .font(.app(13))
                         .foregroundStyle(Theme.faint)
                         .padding(.bottom, 64)
                 }

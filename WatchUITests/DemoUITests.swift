@@ -36,16 +36,6 @@ final class DemoUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["и введи код"].waitForExistence(timeout: 10))
     }
 
-    func testMyColor() {
-        let app = XCUIApplication.russian(demo: "circles")
-        let myColor = app.openSettings(showing: "myColor")
-        myColor.tap()
-        let blue = app.buttons["Голубой"].firstMatch
-        XCTAssertTrue(blue.waitForExistence(timeout: 10))
-        blue.tap()
-        XCTAssertTrue(myColor.waitForExistence(timeout: 10))
-    }
-
     func testSignOut() {
         let app = XCUIApplication.russian(demo: "circles")
         app.signOut()

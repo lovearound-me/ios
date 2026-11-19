@@ -82,8 +82,12 @@ final class AppModel: ObservableObject {
     /// Why the sign-in failed, under its buttons.
     @Published var signInProblem: String?
     @Published var busy = false
-    /// The site's sign-in page is open in Safari and has not answered yet.
-    @Published var waitingForBrowser = false
+    /// The site's sign-in page is open in a sheet over the app and has not
+    /// answered yet.
+    @Published private(set) var waitingForBrowser = false
+    /// Before iOS asks about notifications: what they are for, once after
+    /// signing in.
+    @Published private(set) var notifyIntro = false
     /// The server has been out of reach for a few seconds: signals don't come.
     @Published private(set) var offline = false
 
@@ -392,19 +396,28 @@ final class AppModel: ObservableObject {
 
     // MARK: Notifications
 
-    /// iOS's permission (asked once, right after signing in), then the token.
+    /// What iOS allows, then the token. iOS asks only once, so first a
+    /// screen of ours says what the notifications are for (NotifyIntroView);
+    /// «Не сейчас» there leaves the question to Настройки → «Уведомление».
     func refreshPush() async {
         guard demo == nil, signedIn else { return }
         await push.refresh()
-        if push.status == .notDetermined && receiveHere {
-            await push.ask()
+        if push.status == .notDetermined && receiveHere && !defaults.bool(forKey: "notifyIntroSeen") {
+            notifyIntro = true
         }
         syncPush()
     }
 
     func askForNotifications() async {
+        closeNotifyIntro()
+        guard demo == nil else { return }
         await push.ask()
         syncPush()
+    }
+
+    func closeNotifyIntro() {
+        if demo == nil { defaults.set(true, forKey: "notifyIntroSeen") }
+        notifyIntro = false
     }
 
     /// Tells the server where and when this iPhone takes notifications, or
@@ -735,15 +748,7 @@ final class AppModel: ObservableObject {
             // Safari can hand the same link over twice; the first one signs in
             // and uses up the state, so a late copy is no news.
             if signedIn && !waitingForBrowser { return }
-            Task {
-                do {
-                    try await auth.completeBrowser(url)
-                    didSignIn()
-                } catch {
-                    if !signedIn { signInProblem = error.localizedDescription }
-                }
-                waitingForBrowser = false
-            }
+            Task { await finishOnSite(url) }
         default:
             break
         }
@@ -808,11 +813,30 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Google or email: the site's page in Safari, which comes back here.
-    func signInInBrowser() {
+    /// Google or email: the site's page in a sheet over the app (`open`,
+    /// the system's sign-in sheet), which answers with lovearound://signin.
+    func signInOnSite(_ open: (URL) async throws -> URL) async {
         signInProblem = nil
         waitingForBrowser = true
-        UIApplication.shared.open(auth.browserSignInURL())
+        do {
+            await finishOnSite(try await open(auth.browserSignInURL()))
+        } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
+            // Closed by the person: nothing to say.
+            waitingForBrowser = false
+        } catch {
+            waitingForBrowser = false
+            signInProblem = tr("Не получилось войти. Попробуй ещё раз.")
+        }
+    }
+
+    private func finishOnSite(_ url: URL) async {
+        do {
+            try await auth.completeBrowser(url)
+            didSignIn()
+        } catch {
+            if !signedIn { signInProblem = error.localizedDescription }
+        }
+        waitingForBrowser = false
     }
 
     private func didSignIn() {
@@ -844,10 +868,14 @@ final class AppModel: ObservableObject {
         signOut()
     }
 
+    /// Also when the session is lost (the account deleted elsewhere): then
+    /// the server can't be told to forget this iPhone, so the iPhone itself
+    /// stops taking notifications until someone signs in again.
     func signOut() {
         stream.stop()
         pushSync?.cancel()
         pushSent = nil
+        if demo == nil { push.forget() }
         cacheSave?.cancel()
         try? FileManager.default.removeItem(at: Self.cacheURL)
         auth.signOut()
@@ -863,20 +891,29 @@ final class AppModel: ObservableObject {
         devicesLoaded = false
         toysPath = []
         adding = nil
+        pairing = nil
         choosingClose = false
         outgoing = nil
+        incoming = false
+        notifyIntro = false
         settingsPath = []
         tab = .hearts
-    }
-
-    func deleteAccount() async throws {
-        if demo == nil {
-            try await api.deleteMe()
-        }
+        // Not carried over to whoever signs in here next.
         lastSent = [:]
-        // Not carried over to an account made here next.
         pausedUntil = nil
         anyoneSentAt = nil
+    }
+
+    /// `appleCode`: from «Войти через Apple» asked once more just now, for an
+    /// account that signs in with Apple. With it Apple forgets the app too
+    /// (its list «Вход с Apple» in the iPhone's settings), as the App Store asks.
+    func deleteAccount(appleCode: String? = nil) async throws {
+        if demo == nil {
+            if let appleCode, let idToken = try? await auth.token() {
+                await AppleSignIn.revoke(authorizationCode: appleCode, idToken: idToken)
+            }
+            try await api.deleteMe()
+        }
         signOut()
     }
 
@@ -928,6 +965,10 @@ final class AppModel: ObservableObject {
     }
 
     // MARK: Demo
+
+    func demoShowNotifyIntro() {
+        notifyIntro = true
+    }
 
     func demoSet(signedIn: Bool, contacts: [Contact], devices: [Device] = [], tab: Tab = .hearts,
                  justSent: String? = nil, outgoing: Outgoing? = nil, anyoneSentAt: Date? = nil, pausedUntil: Date? = nil,

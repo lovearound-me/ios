@@ -260,13 +260,13 @@ final class PhoneDemoUITests: XCTestCase {
         let does = app.element("deviceDoes")
         XCTAssertTrue(does.waitForExistence(timeout: 5))
         does.tap()
-        for id in ["doesReceive", "doesSend"] {
-            let toggle = app.switches[id]
-            XCTAssertTrue(toggle.waitForExistence(timeout: 5))
-            let knob = toggle.switches.firstMatch
-            (knob.exists ? knob : toggle).tap()
-            XCTAssertEqual(toggle.value as? String, "0", id)
-        }
+        // The watch asked only to send: that is all there is to switch off.
+        let toggle = app.switches["doesSend"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.switches["doesReceive"].isEnabled)
+        let knob = toggle.switches.firstMatch
+        (knob.exists ? knob : toggle).tap()
+        XCTAssertEqual(toggle.value as? String, "0")
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(does.waitForExistence(timeout: 5))
         XCTAssertTrue(does.label.contains("Ничего не делает"), does.label)
@@ -307,6 +307,30 @@ final class PhoneDemoUITests: XCTestCase {
         app.element("saveName").tap()
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         XCTAssertTrue(name.label.contains("Кнопка у кровати"), name.label)
+    }
+
+    /// The screen before iOS's own question about notifications: «Не
+    /// сейчас» closes it and the circles are there.
+    func testNotifyIntroCloses() {
+        let app = XCUIApplication.russian(demo: "notifyIntro")
+        let later = app.element("notifyIntroLater")
+        XCTAssertTrue(later.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("notifyIntroAllow").exists)
+        later.tap()
+        XCTAssertTrue(later.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Аня"].isHittable)
+    }
+
+    /// Nothing promises what isn't there yet, and the pages about privacy
+    /// and help are a tap away.
+    func testNoComingSoonAndPagesAreLinked() {
+        let app = XCUIApplication.russian(demo: "toys")
+        app.openTab("Игрушки")
+        XCTAssertTrue(app.element("device-d2").waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["скоро"].exists)
+        app.openTab("Настройки")
+        XCTAssertTrue(app.element("settingsPrivacy").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("settingsHelp").exists)
     }
 
     func testSignOut() {

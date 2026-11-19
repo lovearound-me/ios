@@ -1,9 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// The person's own devices: a watch, a lamp, a board. Toys over Bluetooth
-/// come later (one shared protocol, a catalog on the server); for now a
-/// device joins by the six digits on its screen, or a board by its token.
+/// The person's own devices: a watch, a lamp, a board. A device joins by
+/// the six digits on its screen, or a board by its token.
 struct ToysView: View {
     @EnvironmentObject var model: AppModel
     @State private var addingBoard = false
@@ -14,7 +13,7 @@ struct ToysView: View {
             List {
                 Section {
                     Text(tr("Игрушка, лампа или своя плата, которая светится, когда о тебе думают, или отправляет сердечко по кнопке."))
-                        .font(.system(size: 15))
+                        .font(.app(15))
                         .foregroundStyle(Theme.muted)
                         // The list's own insets: on iOS 26 a row narrower than
                         // them gets its first letter cut at the left edge.
@@ -49,17 +48,6 @@ struct ToysView: View {
                         Label(tr("Своя плата"), systemImage: "cpu")
                     }
                     .accessibilityIdentifier("addBoard")
-                    HStack {
-                        Label(tr("Игрушки по Bluetooth"), systemImage: "dot.radiowaves.left.and.right")
-                            .foregroundStyle(Theme.faint)
-                        Spacer()
-                        Text(tr("скоро"))
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Theme.muted)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Theme.well, in: Capsule())
-                    }
                 } footer: {
                     Text(tr("Код на шесть цифр показывают часы и лампы. Своей плате нужен токен: его вставляют в прошивку."))
                 }
@@ -118,16 +106,16 @@ struct DeviceRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: DeviceRow.symbol(device.kind))
-                .font(.system(size: 18))
+                .font(.app(18))
                 .foregroundStyle(Theme.ink)
                 .frame(width: 40, height: 40)
                 .background(Theme.well, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
                 Text(device.name)
-                    .font(.system(size: 17))
+                    .font(.app(17))
                     .foregroundStyle(Theme.ink)
                 Text(detail)
-                    .font(.system(size: 13))
+                    .font(.app(13))
                     .foregroundStyle(Theme.muted)
             }
         }
@@ -187,10 +175,10 @@ struct PairView: View {
                 Section {
                     VStack(spacing: 10) {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 44))
+                            .font(.app(44))
                             .foregroundStyle(Theme.ok)
                         Text(tr("Подключено"))
-                            .font(.system(size: 22, weight: .bold))
+                            .font(.app(22, weight: .bold))
                         Text(tr("{name} теперь в твоём аккаунте.", ["name": done]))
                             .foregroundStyle(Theme.muted)
                             .multilineTextAlignment(.center)
@@ -203,7 +191,7 @@ struct PairView: View {
                     TextField("000 000", text: $code)
                         .keyboardType(.numberPad)
                         .textContentType(.oneTimeCode)
-                        .font(.system(size: 30, weight: .semibold, design: .rounded).monospacedDigit())
+                        .font(.app(30, weight: .semibold, design: .rounded).monospacedDigit())
                         .multilineTextAlignment(.center)
                         .focused($focused)
                         .accessibilityLabel(tr("Код с экрана устройства"))
@@ -229,7 +217,7 @@ struct PairView: View {
                 if let card {
                     Section {
                         Label(card.name, systemImage: DeviceRow.symbol(card.kind))
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(.app(17, weight: .semibold))
                         ForEach(promises(card.capabilities), id: \.self) { line in
                             Text("· " + line).foregroundStyle(Theme.muted)
                         }
@@ -334,7 +322,7 @@ struct BoardView: View {
 
     init(shownToken: String? = nil) {
         _token = State(initialValue: shownToken)
-        if shownToken != nil { _name = State(initialValue: "Котик на полке") }
+        if shownToken != nil { _name = State(initialValue: Demo.devices[1].name) }
     }
 
     var body: some View {
@@ -342,7 +330,7 @@ struct BoardView: View {
             if let token {
                 Section {
                     Text(token)
-                        .font(.system(size: 15, design: .monospaced))
+                        .font(.app(15, design: .monospaced))
                         .textSelection(.enabled)
                         .accessibilityIdentifier("boardToken")
                     Button {

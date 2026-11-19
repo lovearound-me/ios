@@ -3,7 +3,9 @@ import SwiftUI
 import WatchKit
 
 /// Everything the watch shows, and the few things it does: sign in (Apple or
-/// a code), load the people, send a signal, play an incoming one.
+/// a code), load the people, send a signal. An incoming one comes to the
+/// wrist as the iPhone's notification: watchOS keeps no connection open for
+/// an app, and the watch has no push of its own yet.
 @MainActor
 final class AppModel: ObservableObject {
     enum Screen: Equatable {
@@ -39,16 +41,6 @@ final class AppModel: ObservableObject {
     @Published private(set) var justSent: String? = nil
     @Published private(set) var caption: String? = nil
 
-    // An incoming signal
-    @Published private(set) var incoming = false
-    /// Picks which emoji float up this time.
-    @Published private(set) var signalSeed = 0
-
-    /// The screen edges glow in it; stays on this watch, like on the Mac.
-    @Published var myColor: Int {
-        didSet { UserDefaults.standard.set(myColor, forKey: "myColor") }
-    }
-
     let demo: Demo?
     private var pairingTask: Task<Void, Never>?
     private var appleNonce = ""
@@ -58,7 +50,6 @@ final class AppModel: ObservableObject {
         let demo = Demo.fromArguments()
         let saved = demo == nil ? Session.load() : nil
         self.demo = demo
-        myColor = UserDefaults.standard.object(forKey: "myColor") as? Int ?? 0
         screen = demo == nil && saved == nil ? .signIn : .main
         // Every stored property has its value from here on.
         session = saved
@@ -176,8 +167,16 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Forgets this watch's token. The device stays in «Устройства» until it
-    /// is removed there: a device token can't remove itself.
+    /// «Выйти»: the watch leaves the account's devices first, while its token
+    /// can still say so; then forgets the token.
+    func signOutHere() async {
+        if demo == nil, let session {
+            try? await API(token: session.token).removeSelf()
+        }
+        signOut()
+    }
+
+    /// Forgets this watch's token.
     func signOut(notice: String? = nil) {
         Session.clear()
         session = nil
@@ -252,28 +251,15 @@ final class AppModel: ObservableObject {
         }
     }
 
-    // MARK: An incoming signal
-
-    /// The wrist tap, the glowing edges and the emoji. Comes from a push
-    /// notification (the server side is still to do) and from the demo.
-    func showSignal() {
-        signalSeed = Int.random(in: 0..<1000)
-        incoming = true
-        WKInterfaceDevice.current().play(.notification)
-        let seed = signalSeed
-        Task {
-            try? await Task.sleep(nanoseconds: 5_500_000_000)
-            if signalSeed == seed { incoming = false }
-        }
-    }
-
     // MARK: Deleting the account
 
-    /// After «Подтверди через Apple»: deletes the account only if Apple
-    /// opened the very account this watch is in.
+    /// After Apple's button on the delete screen: deletes the account only
+    /// if Apple opened the very account this watch is in. Apple forgets the
+    /// app as well (AppleSignIn.revoke).
     func deleteFinished(_ result: Result<ASAuthorization, Error>) {
         guard case .success(let authorization) = result,
               let identityToken = AppleSignIn.identityToken(authorization) else { return }
+        let appleCode = AppleSignIn.authorizationCode(authorization)
         let nonce = appleNonce
         busy = true
         notice = nil
@@ -283,15 +269,16 @@ final class AppModel: ObservableObject {
                 let user = try await AppleSignIn.firebase(identityToken: identityToken, rawNonce: nonce)
                 guard let mine = session?.email, let theirs = user.email,
                       mine.caseInsensitiveCompare(theirs) == .orderedSame else {
-                    notice = tr("Это другой аккаунт. Удалить этот можно на {site} → Настройки → Аккаунт.",
-                                ["site": Config.webApp])
+                    notice = tr("Это другой аккаунт. Удалить этот можно в Love Around на iPhone: Настройки → Аккаунт.")
                     return
+                }
+                if let appleCode {
+                    await AppleSignIn.revoke(authorizationCode: appleCode, idToken: user.idToken)
                 }
                 try await API.deleteAccount(firebaseToken: user.idToken)
                 signOut(notice: tr("Аккаунт удалён."))
             } catch AppleSignIn.Failure.emailExists {
-                notice = tr("Это другой аккаунт. Удалить этот можно на {site} → Настройки → Аккаунт.",
-                            ["site": Config.webApp])
+                notice = tr("Это другой аккаунт. Удалить этот можно в Love Around на iPhone: Настройки → Аккаунт.")
             } catch AppleSignIn.Failure.network {
                 notice = tr("Нет связи, проверь интернет")
             } catch {

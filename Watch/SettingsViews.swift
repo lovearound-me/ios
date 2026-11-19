@@ -1,5 +1,11 @@
 import AuthenticationServices
 import SwiftUI
+import WatchKit
+
+/// The 40 mm watch (162 pt wide) and smaller: less fits before the fold.
+enum Screen {
+    static let small = WKInterfaceDevice.current().screenBounds.width < 170
+}
 
 struct SettingsView: View {
     @EnvironmentObject var model: AppModel
@@ -7,15 +13,6 @@ struct SettingsView: View {
 
     var body: some View {
         List {
-            NavigationLink {
-                ColorPickerView()
-            } label: {
-                HStack(spacing: 8) {
-                    Circle().fill(Palette.color(model.myColor)).frame(width: 14, height: 14)
-                    Text(tr("Мой цвет"))
-                }
-            }
-            .accessibilityIdentifier("myColor")
             if let email = model.session?.email {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(tr("Аккаунт"))
@@ -37,50 +34,11 @@ struct SettingsView: View {
         }
         .navigationTitle(tr("Настройки"))
         .alert(tr("Выйти на этих часах?"), isPresented: $confirmSignOut) {
-            Button(tr("Выйти"), role: .destructive) { model.signOut() }
+            Button(tr("Выйти"), role: .destructive) { Task { await model.signOutHere() } }
             Button(tr("Отмена"), role: .cancel) {}
         } message: {
-            Text(tr("Часы останутся в «Устройствах» на {site}: убери их там.", ["site": Config.webApp]))
+            Text(tr("Часы пропадут из устройств аккаунта. Люди и аккаунт останутся."))
         }
-    }
-}
-
-/// My color: the edges glow in it when someone thinks of me. Stays on this watch.
-struct ColorPickerView: View {
-    @EnvironmentObject var model: AppModel
-    @Environment(\.dismiss) private var dismiss
-
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
-
-    var body: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 8) {
-                ForEach(Palette.all.indices, id: \.self) { i in
-                    Button {
-                        model.myColor = i
-                        dismiss()
-                    } label: {
-                        ZStack {
-                            Circle().fill(Palette.color(i))
-                            if i == model.myColor {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        .frame(width: 34, height: 34)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Palette.all[i].name)
-                }
-            }
-            Text(tr("Этим цветом светятся края экрана, когда кто-то о тебе думает."))
-                .font(.system(size: 12))
-                .foregroundStyle(Palette.muted)
-                .multilineTextAlignment(.center)
-                .padding(.top, 8)
-        }
-        .navigationTitle(tr("Мой цвет"))
     }
 }
 
@@ -93,24 +51,23 @@ struct DeleteAccountView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 6) {
+                // Short, so Apple's button is on the first screen of the
+                // smallest watch too.
                 Text(tr("Удалятся твои люди, устройства и сам аккаунт. Вернуть нельзя."))
-                    .font(.system(size: 13))
+                    .font(.system(size: Screen.small ? 12 : 13))
                     .multilineTextAlignment(.center)
-                Text(tr("Подтверди через Apple:"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(Palette.muted)
-                    .padding(.top, 4)
+                    .fixedSize(horizontal: false, vertical: true)
                 SignInWithAppleButton(.continue, onRequest: { model.prepareApple($0) }, onCompletion: { model.deleteFinished($0) })
                     .signInWithAppleButtonStyle(.white)
-                    .frame(height: 40)
+                    .frame(height: Screen.small ? 36 : 40)
+                    .padding(.top, 2)
                 if let notice = model.notice {
                     Text(notice)
                         .font(.footnote)
                         .foregroundStyle(Palette.link)
                         .multilineTextAlignment(.center)
                 }
-                Text(tr("Входишь не через Apple? Удалить аккаунт можно на {site} → Настройки → Аккаунт.",
-                        ["site": Config.webApp]))
+                Text(tr("Входишь не через Apple? Удали аккаунт в Love Around на iPhone: Настройки → Аккаунт."))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

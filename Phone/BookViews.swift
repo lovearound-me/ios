@@ -104,7 +104,7 @@ struct BookView: View {
                 HStack(spacing: 14) {
                     PersonCircle(contact: contact, sent: model.justSent == contact.id, size: 40, named: false)
                     Text(contact.label)
-                        .font(.system(size: 17))
+                        .font(.app(17))
                         .foregroundStyle(Theme.ink)
                     Spacer()
                     Image(systemName: "heart")
@@ -121,7 +121,8 @@ struct BookView: View {
             Button { editing = contact } label: {
                 Image(systemName: "pencil")
                     .foregroundStyle(Theme.muted)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
             .accessibilityLabel(tr("Изменить"))
@@ -152,7 +153,7 @@ struct ColorSwatches: View {
                             if selection == index {
                                 Circle().strokeBorder(Theme.paper, lineWidth: 3).padding(3)
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 14, weight: .bold))
+                                    .font(.app(14, weight: .bold))
                                     .foregroundStyle(.white)
                             }
                         }

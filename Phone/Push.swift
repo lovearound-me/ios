@@ -65,6 +65,13 @@ final class Push: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
         await refresh()
     }
 
+    /// Signed out: Apple stops delivering to this iPhone, whatever the server
+    /// still holds. `refresh()` after the next sign-in registers again.
+    func forget() {
+        UIApplication.shared.unregisterForRemoteNotifications()
+        token = nil
+    }
+
     func got(_ deviceToken: Data) {
         let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
         guard hex != token else { return }

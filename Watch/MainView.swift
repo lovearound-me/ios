@@ -117,13 +117,13 @@ struct AnyoneCircle: View {
     }
 }
 
-/// No people yet: they are added in the web app, by Love ID links.
+/// No people yet: they are added in the iPhone app, by Love ID links.
 struct EmptyHint: View {
     var body: some View {
         VStack(spacing: 2) {
             Text(tr("Пока никого нет"))
                 .font(.system(size: 14, weight: .semibold))
-            Text(tr("Добавь людей на {site}", ["site": Config.webApp]))
+            Text(tr("Добавь людей в Love Around на iPhone"))
                 .font(.system(size: 12))
                 .foregroundStyle(Palette.muted)
                 .multilineTextAlignment(.center)

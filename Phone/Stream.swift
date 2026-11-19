@@ -77,7 +77,8 @@ final class Stream {
     private func connect() {
         generation += 1
         let gen = generation
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
+            guard let self else { return }
             let token: String
             do {
                 token = try await auth.token(forceRefresh: refreshToken)

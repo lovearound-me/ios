@@ -43,13 +43,22 @@ struct API {
         try API.check(status, data)
     }
 
+    /// «Выйти»: the watch leaves the account's devices, and its token stops
+    /// working.
+    func removeSelf() async throws {
+        let (status, data) = try await API.send("DELETE", "v1/devices/self", bearer: token)
+        try API.check(status, data)
+    }
+
     // MARK: Pairing by code
 
-    /// What this device asks for: it shows people and sends, and takes signals.
+    /// What this device asks for: it shows people and sends. An incoming
+    /// heart reaches the wrist as the iPhone's notification, not through
+    /// this app, so it doesn't ask to receive.
     static let deviceAsk: [String: Any] = [
         "name": "Apple Watch",
         "kind": "watch",
-        "capabilities": ["receive", "send"],
+        "capabilities": ["send"],
     ]
 
     struct PairingCode: Decodable, Equatable {
