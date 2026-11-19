@@ -64,6 +64,8 @@ struct SendHeartIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        // A button whose person was removed from the book: nothing to send.
+        guard !contactID.isEmpty else { throw HeartSender.Failure.refused }
         try await HeartSender.send(to: contactID)
         WidgetData.sent(contactID)
         return .result(dialog: IntentDialog(stringLiteral: tr("{name} — улетело ♥", ["name": name])))
@@ -82,5 +84,27 @@ struct SendAnyoneIntent: AppIntent {
         try await HeartSender.sendAnyone()
         WidgetData.sent(WidgetData.anyoneID)
         return .result(dialog: IntentDialog(stringLiteral: tr("Кому-нибудь на свете — улетело ✨")))
+    }
+}
+
+/// The person picker of a widget's or a button's settings: the contact id
+/// as a plain string, with the name as its title. A PersonEntity there was
+/// listed but never came back to the extension ("PersonEntity is not a
+/// registered AppEntity identifier"): the button got no one and the server
+/// answered 400.
+struct PersonOptions: DynamicOptionsProvider {
+    func results() async throws -> ItemCollection<String> {
+        let people = WidgetData.people ?? []
+        return ItemCollection(sections: [
+            ItemSection(items: people.map { IntentItem($0.id, title: "\($0.label)") }),
+        ])
+    }
+}
+
+extension WidgetData {
+    /// The person a picker chose, if they are still in the book.
+    static func person(_ id: String?) -> Person? {
+        guard let id else { return nil }
+        return people?.first { $0.id == id }
     }
 }

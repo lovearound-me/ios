@@ -161,8 +161,8 @@ struct EmptyBookView: View {
 struct PickPersonIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Pick a person"
 
-    @Parameter(title: "Person")
-    var person: PersonEntity?
+    @Parameter(title: "Person", optionsProvider: PersonOptions())
+    var personID: String?
 
     init() {}
 }
@@ -193,7 +193,7 @@ struct PersonProvider: AppIntentTimelineProvider {
         let now = Date()
         let people = WidgetData.people
         let person = people.flatMap { list in
-            list.first { $0.id == configuration.person?.id } ?? list.first
+            list.first { $0.id == configuration.personID } ?? list.first
         }
         let entry = { (date: Date, sent: Bool) in
             PersonEntry(date: date, person: person, signedOut: people == nil, sent: sent)
@@ -398,8 +398,8 @@ struct GlowView: View {
 struct PickPersonControlIntent: ControlConfigurationIntent {
     static var title: LocalizedStringResource = "Pick a person"
 
-    @Parameter(title: "Person")
-    var person: PersonEntity?
+    @Parameter(title: "Person", optionsProvider: PersonOptions())
+    var personID: String?
 
     init() {}
 }
@@ -408,9 +408,9 @@ struct PickPersonControlIntent: ControlConfigurationIntent {
 struct PersonControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         AppIntentControlConfiguration(kind: "person-control", intent: PickPersonControlIntent.self) { configuration in
-            ControlWidgetButton(action: SendHeartIntent(contactID: configuration.person?.id ?? "",
-                                                        name: configuration.person?.name ?? "")) {
-                Label(configuration.person?.name ?? tr("Отправить сердечко"), systemImage: "heart.fill")
+            let person = WidgetData.person(configuration.personID)
+            ControlWidgetButton(action: SendHeartIntent(contactID: person?.id ?? "", name: person?.label ?? "")) {
+                Label(person?.label ?? tr("Отправить сердечко"), systemImage: "heart.fill")
             }
         }
         .displayName("Send a heart")

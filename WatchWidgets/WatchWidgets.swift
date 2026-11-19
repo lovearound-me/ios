@@ -184,8 +184,8 @@ struct CloseStackView: View {
 struct PickPersonControlIntent: ControlConfigurationIntent {
     static var title: LocalizedStringResource = "Pick a person"
 
-    @Parameter(title: "Person")
-    var person: PersonEntity?
+    @Parameter(title: "Person", optionsProvider: PersonOptions())
+    var personID: String?
 
     init() {}
 }
@@ -194,9 +194,9 @@ struct PickPersonControlIntent: ControlConfigurationIntent {
 struct WatchPersonControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         AppIntentControlConfiguration(kind: "person-control", intent: PickPersonControlIntent.self) { configuration in
-            ControlWidgetButton(action: SendHeartIntent(contactID: configuration.person?.id ?? "",
-                                                        name: configuration.person?.name ?? "")) {
-                Label(configuration.person?.name ?? tr("Отправить сердечко"), systemImage: "heart.fill")
+            let person = WidgetData.person(configuration.personID)
+            ControlWidgetButton(action: SendHeartIntent(contactID: person?.id ?? "", name: person?.label ?? "")) {
+                Label(person?.label ?? tr("Отправить сердечко"), systemImage: "heart.fill")
             }
         }
         .displayName("Send a heart")
