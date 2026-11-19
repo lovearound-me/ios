@@ -40,14 +40,14 @@ struct Demo {
                                       expires_in: 600, poll_every: 3)
 
     static let contacts: [Contact] = [
-        Contact(id: "1", label: said("Мама", "Mom"), position: 0, close: true, color: 1),
-        Contact(id: "2", label: said("Аня", "Anna"), position: 1, close: true, color: 2),
-        Contact(id: "3", label: said("Оля", "Olivia"), position: 2, close: true, color: 3),
-        Contact(id: "4", label: said("Лёша", "Alex"), position: 3, close: true, color: 5),
-        Contact(id: "5", label: said("Петя", "Peter"), position: 4, close: true, color: 4),
-        Contact(id: "6", label: said("Ваня", "John"), position: 5, close: false, color: 10),
-        Contact(id: "7", label: said("Дима", "Dan"), position: 6, close: false, color: 6),
-        Contact(id: "8", label: said("Света", "Lucy"), position: 7, close: false, color: 8),
+        Contact(id: "1", label: Demo.said("Мама", "Mom"), position: 0, close: true, color: 1),
+        Contact(id: "2", label: Demo.said("Аня", "Anna"), position: 1, close: true, color: 2),
+        Contact(id: "3", label: Demo.said("Оля", "Olivia"), position: 2, close: true, color: 3),
+        Contact(id: "4", label: Demo.said("Лёша", "Alex"), position: 3, close: true, color: 5),
+        Contact(id: "5", label: Demo.said("Петя", "Peter"), position: 4, close: true, color: 4),
+        Contact(id: "6", label: Demo.said("Ваня", "John"), position: 5, close: false, color: 10),
+        Contact(id: "7", label: Demo.said("Дима", "Dan"), position: 6, close: false, color: 6),
+        Contact(id: "8", label: Demo.said("Света", "Lucy"), position: 7, close: false, color: 8),
     ]
 
     @MainActor
@@ -66,7 +66,7 @@ struct Demo {
             model.demoSet(session: Demo.session, contacts: people, screen: .connected)
         case "sent":
             model.demoSet(session: Demo.session, contacts: people, justSent: "2",
-                          caption: tr("{name} — улетело ♥", ["name": said("Аня", "Anna")]), screen: .main)
+                          caption: tr("{name} — улетело ♥", ["name": Demo.said("Аня", "Anna")]), screen: .main)
         case "anyone":
             model.demoSet(session: Demo.session, contacts: people, justSent: AppModel.anyoneID,
                           caption: tr("Кому-нибудь на свете — улетело ✨"), screen: .main)
