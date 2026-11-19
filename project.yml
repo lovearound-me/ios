@@ -51,6 +51,10 @@ targets:
       - target: LoveAroundWidgets
       - package: GoogleSignIn
         product: GoogleSignIn
+      # Linked by name, so the archive reads Siri's phrases (without it:
+      # "no AppIntents.framework dependency", and AppShortcuts.strings
+      # "not used in any App Shortcut").
+      - sdk: AppIntents.framework
     info:
       path: Phone/Info.plist
       properties:
@@ -145,6 +149,8 @@ targets:
       - path: i18n
         type: folder
         buildPhase: resources
+    dependencies:
+      - sdk: AppIntents.framework
     info:
       path: Widgets/Info.plist
       properties:
@@ -227,6 +233,8 @@ targets:
       - path: i18n
         type: folder
         buildPhase: resources
+    dependencies:
+      - sdk: AppIntents.framework
     info:
       path: WatchWidgets/Info.plist
       properties:
