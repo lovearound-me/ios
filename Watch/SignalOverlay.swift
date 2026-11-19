@@ -90,6 +90,11 @@ final class SignalNotificationController: WKUserNotificationHostingController<Si
     override var body: SignalNotificationView {
         SignalNotificationView(color: Palette.color(AppModel.savedColor))
     }
+
+    /// watchOS shows the dynamic view only once this has been called on it;
+    /// without it, it waits, then falls back to the static look. Nothing to
+    /// read: the heart says nothing but «♥».
+    override func didReceive(_ notification: UNNotification) {}
 }
 
 struct SignalNotificationView: View {
