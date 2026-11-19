@@ -31,13 +31,18 @@ final class Push: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
 
     /// Whether Apple's sandbox sends this build's notifications: a build
     /// installed from Xcode or over the cable, signed for development, says
-    /// so in its profile; TestFlight and the App Store carry none.
+    /// so in its profile; TestFlight and the App Store carry none. A
+    /// simulator has no profile, and its token is always a sandbox one.
     static let sandbox: Bool = {
+        #if targetEnvironment(simulator)
+        return true
+        #else
         guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
               let data = try? Data(contentsOf: url),
               let text = String(data: data, encoding: .isoLatin1),
               let key = text.range(of: "<key>aps-environment</key>") else { return false }
         return text[key.upperBound...].prefix(100).contains("<string>development</string>")
+        #endif
     }()
 
     /// From `application(_:didFinishLaunchingWithOptions:)`: a tap that
