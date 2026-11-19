@@ -1,9 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// A device's card: who can reach it, how it glows, what it does, its name;
-/// a board's new token; disconnecting. Each row opens a page of its own.
-/// «Как светится» waits for firmware that describes its own settings.
+/// A device's card: who can reach it, what it does, its name; a board's new
+/// token; disconnecting. Each row opens a page of its own. How it glows will
+/// come with firmware that describes its own settings.
 struct DeviceCard: View {
     @EnvironmentObject var model: AppModel
     let id: String
@@ -55,8 +55,6 @@ struct DeviceCard: View {
                     row("heart.fill", tint: Theme.link, title: tr("Кто может достучаться"), sub: Self.reachLine(device))
                 }
                 .accessibilityIdentifier("deviceWho")
-                row("sun.max.fill", tint: Theme.faint, title: tr("Как светится"),
-                    sub: tr("Пока нечего настраивать: настройки пришлёт новая прошивка"), muted: true)
                 NavigationLink(value: Self.does(id)) {
                     row("arrow.left.arrow.right", tint: Theme.ok, title: tr("Что делает"), sub: Self.doesLine(device))
                 }
@@ -118,16 +116,16 @@ struct DeviceCard: View {
     private func header(_ device: Device) -> some View {
         VStack(spacing: 8) {
             Image(systemName: DeviceRow.symbol(device.kind))
-                .font(.system(size: 32))
+                .font(.app(32))
                 .foregroundStyle(Theme.heart)
                 .frame(width: 76, height: 76)
                 .background(Theme.heartSoft, in: Circle())
             Text(device.name)
-                .font(.system(size: 25, weight: .bold))
+                .font(.app(25, weight: .bold))
                 .foregroundStyle(Theme.ink)
                 .multilineTextAlignment(.center)
             Text(Self.kindName(device.kind) + DeviceRow.seen(device))
-                .font(.system(size: 14))
+                .font(.app(14))
                 .foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
         }
@@ -135,19 +133,19 @@ struct DeviceCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func row(_ symbol: String, tint: Color, title: String, sub: String, muted: Bool = false) -> some View {
+    private func row(_ symbol: String, tint: Color, title: String, sub: String) -> some View {
         HStack(spacing: 14) {
             Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.app(15, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 34, height: 34)
                 .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 16))
-                    .foregroundStyle(muted ? Theme.muted : Theme.ink)
+                    .font(.app(16))
+                    .foregroundStyle(Theme.ink)
                 Text(sub)
-                    .font(.system(size: 13))
+                    .font(.app(13))
                     .foregroundStyle(Theme.muted)
             }
         }
@@ -214,7 +212,7 @@ struct DeviceWhoView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(tr("Кому-нибудь на свете"))
                             Text(tr("Сердечко от случайного человека"))
-                                .font(.system(size: 13))
+                                .font(.app(13))
                                 .foregroundStyle(Theme.muted)
                         }
                     }
@@ -348,7 +346,7 @@ struct DeviceDoesView: View {
                 Text(title)
                 if let sub {
                     Text(sub)
-                        .font(.system(size: 13))
+                        .font(.app(13))
                         .foregroundStyle(Theme.muted)
                 }
             }
@@ -423,7 +421,7 @@ struct NewTokenView: View {
         Form {
             Section {
                 Text(token)
-                    .font(.system(size: 15, design: .monospaced))
+                    .font(.app(15, design: .monospaced))
                     .textSelection(.enabled)
                     .accessibilityIdentifier("newTokenValue")
                 Button {

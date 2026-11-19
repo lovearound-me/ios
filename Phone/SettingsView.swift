@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 import UIKit
 
@@ -12,6 +13,7 @@ enum SettingsPage: Hashable {
 struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @ObservedObject private var push = Push.shared
+    @State private var showingHow = false
 
     var body: some View {
         NavigationStack(path: $model.settingsPath) {
@@ -40,6 +42,25 @@ struct SettingsView: View {
                     }
                     .accessibilityIdentifier("settingsDoes")
                     pauseRow
+                }
+                .listRowBackground(Theme.field)
+                Section {
+                    Button { showingHow = true } label: {
+                        HStack {
+                            Text(tr("Как это работает"))
+                                .font(.app(16))
+                                .foregroundStyle(Theme.ink)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.app(13, weight: .semibold))
+                                .foregroundStyle(Theme.faint)
+                        }
+                    }
+                    .accessibilityIdentifier("settingsHow")
+                    Link(destination: Config.supportPage) { pageRow(tr("Помощь")) }
+                        .accessibilityIdentifier("settingsHelp")
+                    Link(destination: Config.privacyPage) { pageRow(tr("Конфиденциальность")) }
+                        .accessibilityIdentifier("settingsPrivacy")
                 } footer: {
                     Text(verbatim: "Love Around \(model.version)")
                 }
@@ -57,6 +78,22 @@ struct SettingsView: View {
                 case .does: PhoneDoesView()
                 }
             }
+            .sheet(isPresented: $showingHow) {
+                HowItWorksView(button: tr("Понятно")) { showingHow = false }
+            }
+        }
+    }
+
+    /// A page of the site, opened over the app.
+    private func pageRow(_ title: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.app(16))
+                .foregroundStyle(Theme.ink)
+            Spacer()
+            Image(systemName: "arrow.up.right")
+                .font(.app(13, weight: .semibold))
+                .foregroundStyle(Theme.faint)
         }
     }
 
@@ -77,7 +114,7 @@ struct SettingsView: View {
                             sub: model.isPaused ? model.pauseText : tr("Нет"))
                 // A menu, not a page: iOS's sign for one.
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.app(13, weight: .semibold))
                     .foregroundStyle(Theme.faint)
             }
         }
@@ -107,6 +144,7 @@ struct SettingsView: View {
 /// out, and at the bottom deleting it all.
 struct AccountView: View {
     @EnvironmentObject var model: AppModel
+    @Environment(\.authorizationController) private var apple
     @State private var confirmSignOut = false
     @State private var confirmDelete = false
     @State private var deleting = false
@@ -119,7 +157,7 @@ struct AccountView: View {
                     Text(Self.shownEmail(model.email))
                         .foregroundStyle(Theme.ink)
                     Text(signedInWith)
-                        .font(.system(size: 13))
+                        .font(.app(13))
                         .foregroundStyle(Theme.muted)
                 }
                 .accessibilityElement(children: .combine)
@@ -132,7 +170,7 @@ struct AccountView: View {
                                 Text(verbatim: "Love ID")
                                     .foregroundStyle(Theme.ink)
                                 Text(link.replacingOccurrences(of: "https://", with: ""))
-                                    .font(.system(size: 13))
+                                    .font(.app(13))
                                     .foregroundStyle(Theme.muted)
                             }
                             Spacer()
@@ -146,10 +184,11 @@ struct AccountView: View {
                 Link(destination: URL(string: "https://\(Config.webApp)/#/settings/signin")!) {
                     HStack {
                         Text(tr("Способы входа"))
+                            .font(.app(16))
                             .foregroundStyle(Theme.ink)
                         Spacer()
                         Image(systemName: "arrow.up.right")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.app(13, weight: .semibold))
                             .foregroundStyle(Theme.faint)
                     }
                 }
@@ -190,6 +229,10 @@ struct AccountView: View {
         .alert(tr("Удалить аккаунт и весь список? Это навсегда."), isPresented: $confirmDelete) {
             Button(tr("Удалить навсегда"), role: .destructive, action: delete)
             Button(tr("Не удалять"), role: .cancel) {}
+        } message: {
+            if model.provider == "apple.com" {
+                Text(tr("Apple попросит подтвердить, что это ты."))
+            }
         }
     }
 
@@ -214,7 +257,22 @@ struct AccountView: View {
         Task {
             defer { deleting = false }
             do {
-                try await model.deleteAccount()
+                var appleCode: String?
+                if model.provider == "apple.com", model.demo == nil {
+                    // Apple once more: with its fresh code Apple forgets the
+                    // app as well. Closed by the person: nothing is deleted.
+                    // Apple not answering doesn't stand in the way.
+                    do {
+                        let request = ASAuthorizationAppleIDProvider().createRequest()
+                        request.requestedScopes = []
+                        if case .appleID(let credential) = try await apple.performRequest(request) {
+                            appleCode = credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
+                        }
+                    } catch let error as ASAuthorizationError where error.code == .canceled {
+                        return
+                    } catch {}
+                }
+                try await model.deleteAccount(appleCode: appleCode)
             } catch {
                 problem = tr("Не получилось удалить")
             }
@@ -232,16 +290,16 @@ struct SettingsRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.app(15, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 34, height: 34)
                 .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 16))
+                    .font(.app(16))
                     .foregroundStyle(Theme.ink)
                 Text(sub)
-                    .font(.system(size: 13))
+                    .font(.app(13))
                     .foregroundStyle(Theme.muted)
             }
             Spacer(minLength: 0)
@@ -266,7 +324,7 @@ struct PhoneWhoView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(tr("Кому-нибудь на свете"))
                         Text(tr("Сердечко от случайного человека"))
-                            .font(.system(size: 13))
+                            .font(.app(13))
                             .foregroundStyle(Theme.muted)
                     }
                 }
@@ -415,18 +473,18 @@ struct NotifyLookView: View {
                                 Text(look.name)
                                     .foregroundStyle(Theme.ink)
                                 Text(look.example)
-                                    .font(.system(size: 15))
+                                    .font(.app(15))
                                     .foregroundStyle(Theme.muted)
                                 if let note = look.note {
                                     Text(note)
-                                        .font(.system(size: 12.5))
+                                        .font(.app(12.5))
                                         .foregroundStyle(Theme.muted)
                                 }
                             }
                             Spacer()
                             if model.notifyLook == look {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 16, weight: .bold))
+                                    .font(.app(16, weight: .bold))
                                     .foregroundStyle(Theme.link)
                             }
                         }
@@ -445,7 +503,7 @@ struct NotifyLookView: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(tr("Со словами"))
                         Text(tr("После эмодзи: «{words}»", ["words": NotifyLook.words]))
-                            .font(.system(size: 13))
+                            .font(.app(13))
                             .foregroundStyle(Theme.muted)
                     }
                 }
@@ -475,14 +533,14 @@ struct NotificationSample: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
                     Text(verbatim: "Love Around")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.app(15, weight: .semibold))
                     Spacer()
                     Text(tr("сейчас"))
-                        .font(.system(size: 13))
+                        .font(.app(13))
                         .foregroundStyle(Color(hex: 0x6E554A))
                 }
                 Text(text)
-                    .font(.system(size: 15))
+                    .font(.app(15))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

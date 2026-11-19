@@ -1,3 +1,4 @@
+import SafariServices
 import SwiftUI
 
 @main
@@ -23,6 +24,7 @@ struct LoveAroundApp: App {
 struct RootView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var textSize
 
     var body: some View {
         ZStack {
@@ -36,16 +38,42 @@ struct RootView: View {
                     .id(out.id)
                     .transition(.opacity)
             }
+            // One at a time: what the app is for, then why it asks about
+            // notifications.
+            if model.howItWorks {
+                HowItWorksView(button: tr("Начать")) { model.closeHowItWorks() }
+                    .transition(.opacity)
+                    .zIndex(1)
+            } else if model.notifyIntro {
+                NotifyIntroView()
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
             if model.incoming {
                 SignalOverlay(color: Palette.color(model.myColor), seed: model.signalSeed)
                     .onTapGesture { model.dismissSignal() }
                     .transition(.opacity)
-                    .zIndex(1)
+                    .zIndex(2)
             }
         }
+        // Font.app measures the text size when a view is drawn: a new size
+        // in the iPhone's settings draws everything again.
+        .id(textSize)
+        // The site's pages (docs, privacy, «Способы входа») open over the
+        // app, not in Safari.
+        .environment(\.openURL, OpenURLAction { url in
+            guard url.scheme == "https" else { return .systemAction }
+            InAppPage.open(url)
+            return .handled
+        })
         .animation(.easeInOut(duration: 0.3), value: model.incoming)
+        .animation(.easeInOut(duration: 0.3), value: model.notifyIntro)
+        .animation(.easeInOut(duration: 0.3), value: model.howItWorks)
         .animation(.easeOut(duration: 0.4), value: model.outgoing)
-        .onOpenURL { model.handle(url: $0) }
+        .onOpenURL { url in
+            if GoogleAccount.handle(url) { return }
+            model.handle(url: url)
+        }
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
             if let url = activity.webpageURL { model.handle(url: url) }
         }
@@ -109,7 +137,7 @@ struct ToastView: View {
 
     var body: some View {
         Text(toast.text)
-            .font(.system(size: 15, weight: .semibold))
+            .font(.app(15, weight: .semibold))
             .multilineTextAlignment(.center)
             .foregroundStyle(toast.failed ? Theme.danger : Theme.ink)
             .padding(.horizontal, 18)
@@ -137,5 +165,71 @@ struct DemoPageView: View {
             }
         }
         .tint(Theme.link)
+    }
+}
+
+/// A page of the site in a Safari sheet over whatever is on screen, a sheet
+/// of the app's included.
+@MainActor
+enum InAppPage {
+    static func open(_ url: URL) {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        guard var top = scenes.flatMap(\.windows).first(where: \.isKeyWindow)?.rootViewController else {
+            UIApplication.shared.open(url)
+            return
+        }
+        while let next = top.presentedViewController { top = next }
+        let page = SFSafariViewController(url: url)
+        page.preferredControlTintColor = UIColor(Theme.link)
+        top.present(page, animated: true)
+    }
+}
+
+/// Before iOS asks about notifications, once after signing in: what they
+/// are for. iOS asks only once, so the question comes when the person has
+/// just said yes here.
+struct NotifyIntroView: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            Image(systemName: "bell.badge.fill")
+                .font(.app(44))
+                .foregroundStyle(Theme.heart)
+                .frame(width: 104, height: 104)
+                .background(Theme.heartSoft, in: Circle())
+            Text(tr("Чтобы сердечко дошло, когда телефон в кармане"))
+                .font(.app(26, weight: .bold))
+                .foregroundStyle(Theme.ink)
+                .multilineTextAlignment(.center)
+                .padding(.top, 26)
+            Text(tr("Разреши уведомления, и сердечко придёт, даже когда приложение закрыто. От кого оно, не видно никогда. Ни о чём другом мы не пишем."))
+                .font(.app(17))
+                .foregroundStyle(Theme.muted)
+                .multilineTextAlignment(.center)
+                .padding(.top, 12)
+            Spacer()
+            Button(tr("Разрешить уведомления")) { Task { await model.askForNotifications() } }
+                .buttonStyle(WideButton(filled: true))
+                .accessibilityIdentifier("notifyIntroAllow")
+            Button(tr("Не сейчас")) { model.closeNotifyIntro() }
+                .font(.app(17))
+                .frame(minHeight: 44)
+                .padding(.top, 8)
+                .accessibilityIdentifier("notifyIntroLater")
+            Text(tr("Включить можно и потом: Настройки → Уведомление."))
+                .font(.app(13))
+                .foregroundStyle(Theme.faint)
+                .multilineTextAlignment(.center)
+                .padding(.top, 6)
+                .padding(.bottom, 24)
+        }
+        .padding(.horizontal, 28)
+        .frame(maxWidth: 520)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.paper.ignoresSafeArea())
+        // VoiceOver stays on this screen, not on the tabs under it.
+        .accessibilityAddTraits(.isModal)
     }
 }

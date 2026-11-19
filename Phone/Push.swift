@@ -31,13 +31,18 @@ final class Push: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
 
     /// Whether Apple's sandbox sends this build's notifications: a build
     /// installed from Xcode or over the cable, signed for development, says
-    /// so in its profile; TestFlight and the App Store carry none.
+    /// so in its profile; TestFlight and the App Store carry none. A
+    /// simulator has no profile, and its token is always a sandbox one.
     static let sandbox: Bool = {
+        #if targetEnvironment(simulator)
+        return true
+        #else
         guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
               let data = try? Data(contentsOf: url),
               let text = String(data: data, encoding: .isoLatin1),
               let key = text.range(of: "<key>aps-environment</key>") else { return false }
         return text[key.upperBound...].prefix(100).contains("<string>development</string>")
+        #endif
     }()
 
     /// From `application(_:didFinishLaunchingWithOptions:)`: a tap that
@@ -65,6 +70,13 @@ final class Push: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
         await refresh()
     }
 
+    /// Signed out: Apple stops delivering to this iPhone, whatever the server
+    /// still holds. `refresh()` after the next sign-in registers again.
+    func forget() {
+        UIApplication.shared.unregisterForRemoteNotifications()
+        token = nil
+    }
+
     func got(_ deviceToken: Data) {
         let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
         guard hex != token else { return }
@@ -72,20 +84,31 @@ final class Push: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
         onToken?()
     }
 
+    // The completion-handler forms, each handler called on the main thread:
+    // with the async forms Swift calls it from a background thread, and
+    // iOS takes the app's snapshot there when a tapped notification opens
+    // it, which aborts the app (UIKit asserts the main thread).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        await MainActor.run { self.onHeart?() }
-        return []
+                                            willPresent notification: UNNotification,
+                                            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated { self.onHeart?() }
+            completionHandler([])
+        }
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            didReceive response: UNNotificationResponse) async {
-        await MainActor.run {
-            if let onTap = self.onTap {
-                onTap()
-            } else {
-                self.tappedEarly = true
+                                            didReceive response: UNNotificationResponse,
+                                            withCompletionHandler completionHandler: @escaping () -> Void) {
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                if let onTap = self.onTap {
+                    onTap()
+                } else {
+                    self.tappedEarly = true
+                }
             }
+            completionHandler()
         }
     }
 }

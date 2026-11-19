@@ -82,8 +82,17 @@ final class AppModel: ObservableObject {
     /// Why the sign-in failed, under its buttons.
     @Published var signInProblem: String?
     @Published var busy = false
-    /// The site's sign-in page is open in Safari and has not answered yet.
-    @Published var waitingForBrowser = false
+    /// Before iOS asks about notifications: what they are for, once after
+    /// signing in.
+    @Published private(set) var notifyIntro = false
+    /// «Как это работает», once after the first sign-in on this iPhone
+    /// (HowItWorksView); Настройки keep it for later.
+    @Published private(set) var howItWorks = false
+    /// «С чего начать» on the home screen: from an empty book until the
+    /// first heart to someone in it.
+    @Published private(set) var starting: Bool { didSet { defaults.set(starting, forKey: "starting") } }
+    /// Its first step: the Love ID was handed to the share sheet.
+    @Published private(set) var sharedLoveID: Bool { didSet { defaults.set(sharedLoveID, forKey: "sharedLoveID") } }
     /// The server has been out of reach for a few seconds: signals don't come.
     @Published private(set) var offline = false
 
@@ -169,6 +178,8 @@ final class AppModel: ObservableObject {
         notifyLook = NotifyLook.current
         notifyWords = NotifyLook.withWords
         lastSent = defaults.dictionary(forKey: "lastSent") as? [String: Date] ?? [:]
+        starting = defaults.bool(forKey: "starting")
+        sharedLoveID = defaults.bool(forKey: "sharedLoveID")
 
         stream.anyone = acceptAnyone
         stream.onSignal = { [weak self] in self?.receive() }
@@ -220,6 +231,7 @@ final class AppModel: ObservableObject {
             let me = try await api.me()
             inviteURL = me.invite_url
             contacts = try await api.contacts()
+            if contacts.isEmpty && !starting { starting = true }
             loaded = true
             keepForNextStart()
             provider = auth.provider
@@ -246,6 +258,7 @@ final class AppModel: ObservableObject {
 
     func send(_ contact: Contact) {
         lastSent[contact.id] = Date()
+        if starting { starting = false }
         sent(contact.id, Palette.color(contact.color), tr("{name} — улетело ♥", ["name": contact.label])) { api in
             try await api.signal(contact.id)
         }
@@ -392,19 +405,47 @@ final class AppModel: ObservableObject {
 
     // MARK: Notifications
 
-    /// iOS's permission (asked once, right after signing in), then the token.
+    /// What iOS allows, then the token. iOS asks only once, so first a
+    /// screen of ours says what the notifications are for (NotifyIntroView);
+    /// «Не сейчас» there leaves the question to Настройки → «Уведомление».
     func refreshPush() async {
         guard demo == nil, signedIn else { return }
         await push.refresh()
-        if push.status == .notDetermined && receiveHere {
-            await push.ask()
+        if push.status == .notDetermined && receiveHere && !defaults.bool(forKey: "notifyIntroSeen") {
+            notifyIntro = true
         }
         syncPush()
     }
 
     func askForNotifications() async {
+        closeNotifyIntro()
+        guard demo == nil else { return }
         await push.ask()
         syncPush()
+    }
+
+    func closeNotifyIntro() {
+        if demo == nil { defaults.set(true, forKey: "notifyIntroSeen") }
+        notifyIntro = false
+    }
+
+    // MARK: The first minutes
+
+    func closeHowItWorks() {
+        if demo == nil { defaults.set(true, forKey: "howItWorksSeen") }
+        howItWorks = false
+    }
+
+    /// «Мой Love ID» of «С чего начать» opened the share sheet. Whether the
+    /// link went anywhere iOS doesn't say, and the step isn't an exam.
+    func openedShare() {
+        if !sharedLoveID { sharedLoveID = true }
+    }
+
+    /// «С чего начать» is on the home screen: nobody in the book yet, or
+    /// somebody is, and no heart has gone to them from here.
+    var showsStart: Bool {
+        loaded && (contacts.isEmpty || starting)
     }
 
     /// Tells the server where and when this iPhone takes notifications, or
@@ -731,19 +772,6 @@ final class AppModel: ObservableObject {
             // The whole link, not url.path: its leading "/" would leave inviteID an empty id.
             guard let invite = Self.inviteID(from: url.absoluteString) else { return }
             openAdding(invite)
-        case "signin":
-            // Safari can hand the same link over twice; the first one signs in
-            // and uses up the state, so a late copy is no news.
-            if signedIn && !waitingForBrowser { return }
-            Task {
-                do {
-                    try await auth.completeBrowser(url)
-                    didSignIn()
-                } catch {
-                    if !signedIn { signInProblem = error.localizedDescription }
-                }
-                waitingForBrowser = false
-            }
         default:
             break
         }
@@ -808,20 +836,55 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Google or email: the site's page in Safari, which comes back here.
-    func signInInBrowser() {
+    /// «Войти через Google»: Google's account chooser over the app.
+    func signInWithGoogle() async {
         signInProblem = nil
-        waitingForBrowser = true
-        UIApplication.shared.open(auth.browserSignInURL())
+        busy = true
+        defer { busy = false }
+        do {
+            let token = try await GoogleAccount.idToken()
+            try await auth.signIn(google: token)
+            didSignIn()
+        } catch GoogleAccount.Failure.cancelled {
+            // Closed by the person: nothing to say.
+        } catch let error as AuthError {
+            signInProblem = error.localizedDescription
+        } catch {
+            signInProblem = tr("Не получилось войти. Попробуй ещё раз.")
+        }
+    }
+
+    /// «Войти по почте»: signs in, or makes the account. What went wrong, for
+    /// the form, or nil once in.
+    func signInWithEmail(_ email: String, password: String) async -> String? {
+        busy = true
+        defer { busy = false }
+        do {
+            try await auth.signIn(email: email, password: password)
+            didSignIn()
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    /// «Забыли пароль?»: what to tell the person.
+    func sendPasswordReset(_ email: String) async -> String {
+        do {
+            try await auth.sendPasswordReset(email: email)
+            return tr("Письмо для нового пароля отправлено")
+        } catch {
+            return error.localizedDescription
+        }
     }
 
     private func didSignIn() {
         signInProblem = nil
-        waitingForBrowser = false
         signedIn = true
         email = auth.session?.email
         provider = auth.provider
         tab = .hearts
+        if !defaults.bool(forKey: "howItWorksSeen") { howItWorks = true }
         if receiveHere { stream.start() }
         Task { await reload() }
         Task { await refreshPush() }
@@ -844,10 +907,14 @@ final class AppModel: ObservableObject {
         signOut()
     }
 
+    /// Also when the session is lost (the account deleted elsewhere): then
+    /// the server can't be told to forget this iPhone, so the iPhone itself
+    /// stops taking notifications until someone signs in again.
     func signOut() {
         stream.stop()
         pushSync?.cancel()
         pushSent = nil
+        if demo == nil { push.forget() }
         cacheSave?.cancel()
         try? FileManager.default.removeItem(at: Self.cacheURL)
         auth.signOut()
@@ -863,20 +930,32 @@ final class AppModel: ObservableObject {
         devicesLoaded = false
         toysPath = []
         adding = nil
+        pairing = nil
         choosingClose = false
         outgoing = nil
+        incoming = false
+        notifyIntro = false
+        howItWorks = false
+        starting = false
+        sharedLoveID = false
         settingsPath = []
         tab = .hearts
-    }
-
-    func deleteAccount() async throws {
-        if demo == nil {
-            try await api.deleteMe()
-        }
+        // Not carried over to whoever signs in here next.
         lastSent = [:]
-        // Not carried over to an account made here next.
         pausedUntil = nil
         anyoneSentAt = nil
+    }
+
+    /// `appleCode`: from «Войти через Apple» asked once more just now, for an
+    /// account that signs in with Apple. With it Apple forgets the app too
+    /// (its list «Вход с Apple» in the iPhone's settings), as the App Store asks.
+    func deleteAccount(appleCode: String? = nil) async throws {
+        if demo == nil {
+            if let appleCode, let idToken = try? await auth.token() {
+                await AppleSignIn.revoke(authorizationCode: appleCode, idToken: idToken)
+            }
+            try await api.deleteMe()
+        }
         signOut()
     }
 
@@ -929,9 +1008,18 @@ final class AppModel: ObservableObject {
 
     // MARK: Demo
 
+    func demoShowNotifyIntro() {
+        notifyIntro = true
+    }
+
+    func demoShowHowItWorks() {
+        howItWorks = true
+    }
+
     func demoSet(signedIn: Bool, contacts: [Contact], devices: [Device] = [], tab: Tab = .hearts,
                  justSent: String? = nil, outgoing: Outgoing? = nil, anyoneSentAt: Date? = nil, pausedUntil: Date? = nil,
-                 receiveHere: Bool = true, quietHours: QuietHours? = nil) {
+                 receiveHere: Bool = true, quietHours: QuietHours? = nil,
+                 starting: Bool = false, sharedLoveID: Bool = false) {
         self.signedIn = signedIn
         email = signedIn ? "anna@example.com" : nil
         provider = signedIn ? "apple.com" : nil
@@ -948,6 +1036,9 @@ final class AppModel: ObservableObject {
         self.receiveHere = receiveHere
         self.pausedUntil = pausedUntil
         self.quietHours = quietHours
+        // As after a real reload: an empty book starts «С чего начать».
+        self.starting = starting || (signedIn && contacts.isEmpty)
+        self.sharedLoveID = sharedLoveID
         lastSent = [:]
     }
 }

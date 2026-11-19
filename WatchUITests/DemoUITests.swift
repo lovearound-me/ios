@@ -36,14 +36,29 @@ final class DemoUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["и введи код"].waitForExistence(timeout: 10))
     }
 
-    func testMyColor() {
+    func testGlowColorAndTry() {
         let app = XCUIApplication.russian(demo: "circles")
-        let myColor = app.openSettings(showing: "myColor")
-        myColor.tap()
+        let glow = app.openSettings(showing: "glow")
+        glow.tap()
         let blue = app.buttons["Голубой"].firstMatch
         XCTAssertTrue(blue.waitForExistence(timeout: 10))
         blue.tap()
-        XCTAssertTrue(myColor.waitForExistence(timeout: 10))
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: blue)
+        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 5), .completed)
+        app.buttons["glowTry"].firstMatch.tap()
+        let glowing = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Кто-то думает о тебе")).firstMatch
+        XCTAssertTrue(glowing.waitForExistence(timeout: 5))
+    }
+
+    func testReceivingSwitch() {
+        let app = XCUIApplication.russian(demo: "circles")
+        _ = app.openSettings(showing: "glow")
+        let receive = app.switches["receiveHere"].firstMatch
+        XCTAssertTrue(receive.waitForExistence(timeout: 10))
+        let before = receive.value as? String
+        receive.tap()
+        let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", before ?? ""), object: receive)
+        XCTAssertEqual(XCTWaiter.wait(for: [changed], timeout: 5), .completed)
     }
 
     func testSignOut() {
@@ -82,6 +97,13 @@ extension XCUIApplication {
             if gear.exists { gear.tap() }
             Thread.sleep(forTimeInterval: 1.5)
             if target.waitForExistence(timeout: 10) { return target }
+            // The page came, but the button lies below the fold: the list
+            // makes its rows only as they scroll in.
+            for _ in 0..<4 where !target.exists {
+                swipeUp()
+                _ = target.waitForExistence(timeout: 2)
+            }
+            if target.exists { return target }
         }
         XCTFail("Settings didn't open")
         return target

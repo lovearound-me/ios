@@ -13,16 +13,20 @@ struct SignInView: View {
                     Text("Love Around")
                         .font(.system(size: 17, weight: .semibold))
                 }
-                Text(tr("Тихий знак, что о тебе думают"))
-                    .font(.system(size: 12))
-                    .foregroundStyle(Palette.muted)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+                // The 40 mm watch has no room for it: «Войти по коду» would
+                // run into the screen's rounded corners.
+                if !Screen.small {
+                    Text(tr("Тихий знак, что о тебе думают"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Palette.muted)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                }
                 SignInWithAppleButton(.signIn, onRequest: { model.prepareApple($0) }, onCompletion: { model.appleFinished($0) })
                     .signInWithAppleButtonStyle(.white)
-                    .frame(height: 40)
-                    .padding(.top, 6)
+                    .frame(height: Screen.small ? 36 : 40)
+                    .padding(.top, Screen.small ? 2 : 6)
                 Button(tr("Войти по коду")) { model.startCode() }
                     .accessibilityIdentifier("codeSignIn")
                 if let notice = model.notice {
@@ -166,7 +170,7 @@ struct ConnectedView: View {
         VStack(spacing: 6) {
             Image(systemName: "heart.fill")
                 .font(.system(size: 52))
-                .foregroundStyle(Palette.color(model.myColor))
+                .foregroundStyle(Palette.link)
                 .symbolEffect(.pulse)
             Text(tr("Часы подключены"))
                 .font(.system(size: 16, weight: .semibold))

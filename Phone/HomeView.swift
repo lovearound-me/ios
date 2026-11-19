@@ -12,9 +12,11 @@ struct HomeView: View {
                 header
                 banners
                 circles
-                if model.contacts.isEmpty {
-                    if model.loaded { EmptyBook() }
-                } else {
+                if model.showsStart {
+                    StartCard()
+                        .transition(.opacity)
+                }
+                if !model.contacts.isEmpty {
                     Button { model.tab = .book } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "book.closed")
@@ -23,10 +25,10 @@ struct HomeView: View {
                                 .foregroundStyle(Theme.ink)
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.app(14, weight: .semibold))
                                 .foregroundStyle(Theme.faint)
                         }
-                        .font(.system(size: 16))
+                        .font(.app(16))
                         .padding(.horizontal, 16)
                         .frame(height: 52)
                         .background(Theme.field, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -40,6 +42,7 @@ struct HomeView: View {
             .padding(.bottom, 32)
             .frame(maxWidth: 560)
             .frame(maxWidth: .infinity)
+            .animation(.easeInOut(duration: 0.3), value: model.showsStart)
         }
         .background(Theme.paper.ignoresSafeArea())
         .refreshable { await model.reload() }
@@ -53,7 +56,7 @@ struct HomeView: View {
                 .fontWeight(.bold)
                 .foregroundStyle(Theme.ink)
         }
-        .font(.system(size: 17))
+        .font(.app(17))
         .frame(height: 40)
     }
 
@@ -74,7 +77,7 @@ struct HomeView: View {
     private var circles: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(model.closeContacts.isEmpty && !model.contacts.isEmpty ? tr("Книга") : tr("Рядом"))
-                .font(.system(size: 13, weight: .semibold))
+                .font(.app(13, weight: .semibold))
                 .foregroundStyle(Theme.muted)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10, alignment: .top), count: 3), spacing: 18) {
                 AnyoneCircle()
@@ -96,7 +99,7 @@ struct HomeView: View {
                 }
             }
             Text(tr("Кому-нибудь: сердечко случайному человеку, раз в час. Он не узнает, от кого."))
-                .font(.system(size: 13))
+                .font(.app(13))
                 .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -130,14 +133,16 @@ struct AnyoneCircle: View {
                     .animation(.spring(duration: 0.3), value: sent)
                     VStack(spacing: 1) {
                         Text(tr("Кому-нибудь"))
-                            .font(.system(size: 14))
+                            .font(.app(14))
                             .foregroundStyle(Theme.ink)
                             .lineLimit(1)
+                            // The longest text size on an SE: whole, a little smaller.
+                            .minimumScaleFactor(0.7)
                         // The line is always there, empty while the star is
                         // ready: a cell that grows after a send leaves the
                         // grid's last row over the hint below it.
                         Text(wait.map { tr("через {n} мин", ["n": String($0)]) } ?? " ")
-                            .font(.system(size: 12))
+                            .font(.app(12))
                             .foregroundStyle(Theme.muted)
                     }
                 }
@@ -168,7 +173,7 @@ struct AddCircle: View {
             }
             .frame(width: size, height: size)
             Text(tr("Добавить"))
-                .font(.system(size: 14))
+                .font(.app(14))
                 .foregroundStyle(Theme.ink)
                 .lineLimit(1)
         }
@@ -188,7 +193,7 @@ struct ChooseCloseView: View {
                     dismiss()
                 } label: {
                     Label(tr("Новый человек по ссылке"), systemImage: "link")
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.app(17, weight: .semibold))
                 }
                 .accessibilityIdentifier("closeNewByLink")
             }
@@ -199,15 +204,17 @@ struct ChooseCloseView: View {
                         HStack(spacing: 14) {
                             PersonCircle(contact: contact, size: 36, named: false)
                             Text(contact.label)
-                                .font(.system(size: 17))
+                                .font(.app(17))
                                 .foregroundStyle(Theme.ink)
                             Spacer()
                             Button { model.setClose(contact, true) } label: {
                                 Image(systemName: "plus")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .font(.app(15, weight: .bold))
                                     .foregroundStyle(Theme.link)
                                     .frame(width: 34, height: 34)
                                     .background(Theme.heartSoft, in: Circle())
+                                    .frame(width: 44, height: 44)
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.borderless)
                             .disabled(model.closeFull)
@@ -269,7 +276,7 @@ struct PersonCircle: View {
             .animation(.spring(duration: 0.3), value: sent)
             if named {
                 Text(contact.label)
-                    .font(.system(size: 14))
+                    .font(.app(14))
                     .foregroundStyle(Theme.ink)
                     .lineLimit(1)
             }
@@ -288,7 +295,7 @@ struct EmptyBook: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(tr("Добавь людей по их ссылке или поделись своим Love ID."))
-                .font(.system(size: 16))
+                .font(.app(16))
                 .foregroundStyle(Theme.ink)
             HStack(spacing: 10) {
                 Button(tr("Добавить по ссылке")) { model.adding = AppModel.Adding(invite: "") }
@@ -317,12 +324,12 @@ struct Banner: View {
             Image(systemName: symbol)
                 .foregroundStyle(Theme.muted)
             Text(text)
-                .font(.system(size: 14))
+                .font(.app(14))
                 .foregroundStyle(Theme.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if let action {
                 Button(action, action: perform)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.app(14, weight: .semibold))
             }
         }
         .padding(14)

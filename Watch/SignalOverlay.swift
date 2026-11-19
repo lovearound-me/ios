@@ -1,4 +1,6 @@
 import SwiftUI
+import UserNotifications
+import WatchKit
 
 /// An incoming signal: the screen edges glow in my color, emoji float up,
 /// and in the middle a heart says someone is thinking of you. Never who.
@@ -9,20 +11,11 @@ struct SignalOverlay: View {
 
     @State private var bright = false
 
-    /// The Mac's mix: hearts among hugs, cats, flowers and treats, so it reads
-    /// as warmth from anyone close, not only love.
-    static let warm = [
-        "❤️", "🧡", "💛", "💚", "💙", "💜", "💖", "💕", "💗",
-        "🫂", "🤗", "🫶", "🥰", "😊", "☺️",
-        "😺", "😸", "😻", "😽", "🐈", "🐱",
-        "🐶", "🐻", "🐼", "🦔", "🐰", "🦊", "🐥", "🧸",
-        "💪", "🙌", "👍", "✊", "👏",
-        "☀️", "🌻", "🌷", "🌸", "🌼", "🌈", "🍀", "✨", "⭐️",
-        "☕️", "🍵", "🍪", "🍰", "🍓", "🎈",
-    ]
+    /// Hearts only, as in the iPhone's notification (Notify/Emoji.swift).
+    static let warm = ["💖", "💕", "💗", "💞", "💓", "💘", "🩷", "❤️", "💝"]
 
-    /// Twelve: enough to feel like a shower, few enough to stay smooth.
-    static let count = 12
+    /// Eight: a few hearts that each get seen, not a crowd.
+    static let count = 8
 
     var body: some View {
         GeometryReader { geo in
@@ -88,5 +81,46 @@ private struct FloatingEmoji: View {
             .onAppear {
                 withAnimation(.easeOut(duration: 3.4).delay(delay)) { up = true }
             }
+    }
+}
+
+/// The long look of a heart's notification (category `signal`), when the
+/// app isn't in front: the glow in my color, and nothing about who.
+final class SignalNotificationController: WKUserNotificationHostingController<SignalNotificationView> {
+    override var body: SignalNotificationView {
+        SignalNotificationView(color: Palette.color(AppModel.savedColor))
+    }
+}
+
+struct SignalNotificationView: View {
+    let color: Color
+
+    @State private var bright = false
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(color)
+                    .frame(width: 64, height: 64)
+                    .blur(radius: 18)
+                    .opacity(bright ? 0.9 : 0.35)
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(color)
+            }
+            .frame(height: 84)
+            Text(tr("Кто-то думает о тебе"))
+                .font(.system(size: 16, weight: .semibold))
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.9).repeatCount(3, autoreverses: true)) {
+                bright = true
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(tr("Кто-то думает о тебе"))
     }
 }

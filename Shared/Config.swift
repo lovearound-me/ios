@@ -11,6 +11,10 @@ enum Config {
     static let webApp = "app.lovearound.me"
     /// The site: invite links /i/<code>, the Google sign-in bridge /signin/, docs.
     static let site = "https://lovearound.me"
+    /// What is kept and where; the App Store's page links to it too.
+    static let privacyPage = URL(string: site + "/privacy")!
+    /// Help, and where to write.
+    static let supportPage = URL(string: site + "/support")!
     /// Links the iPhone app opens: lovearound://add/<code>, lovearound://signin?….
     static let urlScheme = "lovearound"
     #if os(watchOS)

@@ -14,12 +14,12 @@ case "$app" in
     *iphonesimulator*)
         bundle=me.lovearound.ios
         os=iOS
-        screens="signin home sent anyone empty signal paused offHere book contact add choose toys board pair device deviceWho deviceDoes deviceBoard settings settingsAccount settingsWho notifyLook"
+        screens="signin how notifyIntro home sent anyone empty start signal paused offHere book contact add choose toys board pair device deviceWho deviceDoes deviceBoard settings settingsAccount settingsWho notifyLook"
         ;;
     *)
         bundle=me.lovearound.ios.watchkitapp
         os=watchOS
-        screens="signin exists code expired computer connected circles sent anyone empty signal settings colors delete"
+        screens="signin exists code expired computer connected circles sent anyone empty signal settings glow delete"
         ;;
 esac
 

@@ -42,6 +42,36 @@ enum AppleSignIn {
         return String(data: data, encoding: .utf8)
     }
 
+    /// Apple's one-time code from the same answer: what `revoke` takes.
+    static func authorizationCode(_ authorization: ASAuthorization) -> String? {
+        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let data = credential.authorizationCode else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    /// Before an account that signs in with Apple is deleted: Apple forgets
+    /// the app too (it leaves «Вход с Apple» in the person's Apple account),
+    /// as the App Store asks. Firebase trades the code with Apple and revokes
+    /// what it gets. Never stands in the way of the deletion itself.
+    static func revoke(authorizationCode: String, idToken: String) async {
+        var url = URLComponents(string: "https://identitytoolkit.googleapis.com/v2/accounts:revokeToken")!
+        url.queryItems = [URLQueryItem(name: "key", value: Config.firebaseAPIKey)]
+        var req = URLRequest(url: url.url!)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 15
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // Which of Apple's client ids the code was made for.
+        req.setValue(Bundle.main.bundleIdentifier, forHTTPHeaderField: "X-Ios-Bundle-Identifier")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "providerId": "apple.com",
+            // 3: an authorization code.
+            "tokenType": "3",
+            "token": authorizationCode,
+            "idToken": idToken,
+        ])
+        _ = try? await URLSession.shared.data(for: req)
+    }
+
     static func firebase(identityToken: String, rawNonce: String) async throws -> FirebaseUser {
         var url = URLComponents(string: "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp")!
         url.queryItems = [URLQueryItem(name: "key", value: Config.firebaseAPIKey)]

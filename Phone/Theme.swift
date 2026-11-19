@@ -36,6 +36,16 @@ extension UIColor {
     }
 }
 
+extension Font {
+    /// The system font, `size` points at the usual text size; follows the
+    /// text size set in the iPhone's settings, up to a third bigger: beyond
+    /// that the circles and rows, drawn for this size, would fall apart.
+    static func app(_ size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default) -> Font {
+        .system(size: min(UIFontMetrics.default.scaledValue(for: size), (size * 1.35).rounded()),
+                weight: weight, design: design)
+    }
+}
+
 /// A button that gives a little under the finger.
 struct PressScale: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
@@ -51,7 +61,7 @@ struct WideButton: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 17, weight: .semibold))
+            .font(.app(17, weight: .semibold))
             .frame(maxWidth: .infinity, minHeight: 52)
             .foregroundStyle(filled ? Theme.onLink : Theme.ink)
             .background(filled ? Theme.link : Theme.well, in: RoundedRectangle(cornerRadius: 14, style: .continuous))

@@ -117,7 +117,7 @@ final class PhoneDemoUITests: XCTestCase {
         let app = XCUIApplication.russian(demo: "settings")
         let row = app.element("settingsLook")
         XCTAssertTrue(row.waitForExistence(timeout: 10))
-        XCTAssertTrue(row.label.contains("Много эмодзи"), row.label)
+        XCTAssertTrue(row.label.contains("Волна сердечек"), row.label)
         row.tap()
         let three = app.element("look-three")
         XCTAssertTrue(three.waitForExistence(timeout: 5))
@@ -134,7 +134,7 @@ final class PhoneDemoUITests: XCTestCase {
         XCTAssertTrue(app.element("notifySample").label.hasSuffix("Кто-то думает о тебе"), app.element("notifySample").label)
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(row.waitForExistence(timeout: 5))
-        XCTAssertTrue(row.label.contains("Три эмодзи · со словами"), row.label)
+        XCTAssertTrue(row.label.contains("Три сердечка · со словами"), row.label)
     }
 
     /// Settings → «Кто может достучаться» → «Тихие часы»: the times show,
@@ -307,6 +307,112 @@ final class PhoneDemoUITests: XCTestCase {
         app.element("saveName").tap()
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         XCTAssertTrue(name.label.contains("Кнопка у кровати"), name.label)
+    }
+
+    /// The screen before iOS's own question about notifications: «Не
+    /// сейчас» closes it and the circles are there.
+    func testNotifyIntroCloses() {
+        let app = XCUIApplication.russian(demo: "notifyIntro")
+        let later = app.element("notifyIntroLater")
+        XCTAssertTrue(later.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("notifyIntroAllow").exists)
+        later.tap()
+        XCTAssertTrue(later.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Аня"].isHittable)
+    }
+
+    /// «Как это работает» comes over the app after the first sign-in, and
+    /// «Начать» leaves the circles.
+    func testHowItWorksCloses() {
+        let app = XCUIApplication.russian(demo: "how")
+        let start = app.element("howClose")
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertEqual(start.label, "Начать")
+        XCTAssertTrue(app.staticTexts["Как это работает"].exists)
+        start.tap()
+        XCTAssertTrue(start.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Аня"].isHittable)
+    }
+
+    /// The same page stays in Настройки for later.
+    func testHowItWorksFromSettings() {
+        let app = XCUIApplication.russian(demo: "settings")
+        let row = app.element("settingsHow")
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.tap()
+        let close = app.element("howClose")
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        XCTAssertEqual(close.label, "Понятно")
+        close.tap()
+        XCTAssertTrue(close.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(row.isHittable)
+    }
+
+    /// «С чего начать» with nobody in the book: both ways in are there, and
+    /// the card stays, one step done, once somebody is added.
+    func testStartCardLeadsToTheFirstPerson() {
+        let app = XCUIApplication.russian(demo: "empty")
+        let add = app.element("startAdd")
+        XCTAssertTrue(add.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("startShare").exists)
+        XCTAssertNotEqual(app.element("startStep2").value as? String, "Готово")
+        add.tap()
+        let link = app.element("inviteLink")
+        XCTAssertTrue(link.waitForExistence(timeout: 5))
+        link.tap()
+        link.typeText("https://lovearound.me/i/HQ7MX-4RT2P")
+        app.element("newName").tap()
+        app.element("newName").typeText("Катя")
+        app.element("addContact").tap()
+        XCTAssertTrue(app.buttons["Катя"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.element("startStep2").value as? String, "Готово")
+        XCTAssertFalse(add.exists)
+    }
+
+    /// The first heart to someone in the book is the last step: the card
+    /// goes.
+    func testStartCardGoesAfterTheFirstHeart() {
+        let app = XCUIApplication.russian(demo: "start")
+        let step = app.element("startStep3")
+        XCTAssertTrue(step.waitForExistence(timeout: 10))
+        XCTAssertEqual(app.element("startStep1").value as? String, "Готово")
+        XCTAssertFalse(app.element("startShare").exists)
+        app.buttons["Аня"].tap()
+        XCTAssertTrue(app.element("sentGlow").waitForExistence(timeout: 3))
+        XCTAssertTrue(step.waitForNonExistence(timeout: 5))
+    }
+
+    /// Nothing promises what isn't there yet, and the pages about privacy
+    /// and help are a tap away.
+    func testNoComingSoonAndPagesAreLinked() {
+        let app = XCUIApplication.russian(demo: "toys")
+        app.openTab("Игрушки")
+        XCTAssertTrue(app.element("device-d2").waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["скоро"].exists)
+        app.openTab("Настройки")
+        XCTAssertTrue(app.element("settingsPrivacy").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("settingsHelp").exists)
+    }
+
+    /// The email form checks what it can before asking Firebase: nothing
+    /// here reaches the network.
+    func testEmailFormChecksFirst() {
+        let app = XCUIApplication.russian(demo: "signin")
+        XCTAssertTrue(app.element("googleSignIn").waitForExistence(timeout: 10))
+        app.element("emailSignIn").tap()
+        let submit = app.buttons["emailSubmit"]
+        XCTAssertTrue(submit.waitForExistence(timeout: 5))
+        submit.tap()
+        let note = app.element("emailNote")
+        XCTAssertTrue(note.waitForExistence(timeout: 5))
+        XCTAssertEqual(note.label, "Введи почту")
+        let email = app.textFields["email"]
+        email.tap()
+        email.typeText("anna.example.com")
+        submit.tap()
+        XCTAssertEqual(note.label, "Проверь адрес почты")
+        app.buttons["Отмена"].tap()
+        XCTAssertTrue(app.element("googleSignIn").waitForExistence(timeout: 5))
     }
 
     func testSignOut() {

@@ -1,7 +1,9 @@
 import SwiftUI
+import WatchKit
 
 @main
 struct LoveAroundApp: App {
+    @WKApplicationDelegateAdaptor(WatchDelegate.self) private var delegate
     @StateObject private var model = AppModel()
 
     var body: some Scene {
@@ -15,6 +17,8 @@ struct LoveAroundApp: App {
             }
             .environmentObject(model)
         }
+        // A heart's notification while the app isn't in front.
+        WKNotificationScene(controller: SignalNotificationController.self, category: "signal")
     }
 }
 
@@ -47,15 +51,24 @@ struct RootView: View {
 /// A navigation screen on its own, for screenshots.
 struct DemoPageView: View {
     let page: Demo.Page
+    @EnvironmentObject var model: AppModel
 
     var body: some View {
-        NavigationStack {
-            switch page {
-            case .computer: ComputerView(code: Demo.code.code)
-            case .settings: SettingsView()
-            case .colors: ColorPickerView()
-            case .delete: DeleteAccountView()
+        ZStack {
+            NavigationStack {
+                switch page {
+                case .computer: ComputerView(code: Demo.code.code)
+                case .settings: SettingsView()
+                case .glow: GlowView()
+                case .delete: DeleteAccountView()
+                }
+            }
+            if model.incoming {
+                SignalOverlay(color: Palette.color(model.myColor), seed: model.signalSeed)
+                    .transition(.opacity)
+                    .zIndex(1)
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: model.incoming)
     }
 }

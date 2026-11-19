@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// An incoming signal: the screen edges glow in my color, twelve emoji float
+/// An incoming signal: the screen edges glow in my color, eight hearts float
 /// up, and in the middle a heart says someone is thinking of you. Never who.
 /// A tap closes it; it fades by itself after a few seconds.
 struct SignalOverlay: View {
@@ -10,11 +10,11 @@ struct SignalOverlay: View {
 
     @State private var bright = false
 
-    /// The Mac's mix (Notify/Emoji.swift), shared with the notifications.
-    static let warm = Emoji.warm
+    /// Hearts only, as in the notification (Notify/Emoji.swift).
+    static let warm = Emoji.pink
 
-    /// Twelve: enough to feel like a shower, few enough to stay smooth.
-    static let count = 12
+    /// Eight: a few hearts that each get seen, not a crowd.
+    static let count = 8
 
     var body: some View {
         GeometryReader { geo in
@@ -38,24 +38,28 @@ struct SignalOverlay: View {
                 }
                 VStack(spacing: 12) {
                     Image(systemName: "heart.fill")
-                        .font(.system(size: 110))
+                        .font(.app(110))
                         .foregroundStyle(color)
                         .symbolEffect(.bounce, value: bright)
                     Text(tr("Кто-то думает о тебе"))
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.app(28, weight: .bold))
                         .foregroundStyle(Theme.ink)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
-                        // Stays readable when an emoji floats behind it.
-                        .background(Theme.paper.opacity(0.6).blur(radius: 12))
                     Text(tr("только что"))
-                        .font(.system(size: 15))
+                        .font(.app(15))
                         .foregroundStyle(Theme.muted)
+                }
+                // The emoji pass behind the heart and the words, not over them.
+                .background {
+                    RadialGradient(colors: [Theme.paper, Theme.paper.opacity(0.92), Theme.paper.opacity(0)],
+                                   center: .center, startRadius: 0, endRadius: 210)
+                        .frame(width: 420, height: 420)
                 }
                 VStack {
                     Spacer()
                     Text(tr("Нажми, чтобы закрыть"))
-                        .font(.system(size: 13))
+                        .font(.app(13))
                         .foregroundStyle(Theme.faint)
                         .padding(.bottom, 64)
                 }
