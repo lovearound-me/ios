@@ -262,7 +262,13 @@ final class AppModel: ObservableObject {
 
     private func register(_ pushToken: String) async {
         guard let session else { return }
-        try? await API(token: session.token).registerPush(pushToken, sandbox: WatchPush.sandbox, silent: taps == 0)
+        let api = API(token: session.token)
+        do {
+            try await api.registerPush(pushToken, sandbox: WatchPush.sandbox, silent: taps == 0)
+        } catch APIError.status(400, _) where taps == 0 {
+            // A server from before «Без вибрации»: hearts with a tap beat none.
+            try? await api.registerPush(pushToken, sandbox: WatchPush.sandbox, silent: false)
+        } catch {}
     }
 
     private func loadReceiving() async {
