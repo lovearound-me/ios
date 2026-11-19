@@ -7,10 +7,11 @@ float up. You never learn who it was.
 
 Status: version 1.0, on its way to the App Store. The iPhone app gets
 signals while it is open (the server's WebSocket, as the Mac app) and by
-Apple push in the background. The watch app only sends: watchOS doesn't let
-ordinary apps keep a WebSocket open ([TN3135](https://developer.apple.com/documentation/technotes/tn3135-low-level-networking-on-watchos)),
-and it has no push of its own yet, so an incoming heart reaches the wrist as
-the iPhone's notification.
+Apple push in the background. watchOS doesn't let ordinary apps keep a
+WebSocket open ([TN3135](https://developer.apple.com/documentation/technotes/tn3135-low-level-networking-on-watchos)),
+so the watch app gets hearts only as its own push notifications, sent to it
+straight from the server: it works without the iPhone app, and with the
+iPhone's receiving off.
 
 ## The iPhone app
 
@@ -55,7 +56,16 @@ the iPhone's notification.
   sign-in.
 - **The main screen** is circles, like the Mac menu: «Кому-нибудь на свете»
   first, then the close people, then everyone else. A tap sends.
-- **Settings**: the account, sign out, delete the account (App Store rule;
+- **A heart for me** comes as the watch's own notification
+  (`PUT /v1/devices/self/push`), on the watch's terms: its «Получать
+  сердечки» (the same switch as «Принимает» in its card on the phone), its
+  quiet hours and «кто-нибудь на свете» from that card. The phone's switch,
+  pause and quiet hours don't touch it. The notification's long look glows in
+  my color (`WKNotificationScene`, category `signal`); with the app in front,
+  the whole screen glows and emoji float up. Where the iPhone takes the heart
+  too, the wrist shows it once: both carry the same `apns-collapse-id`.
+- **Settings**: «Получать сердечки», «Как светится» (my color, and «Показать»
+  to try it), the account, sign out, delete the account (App Store rule;
   confirmed with a fresh Apple sign-in, which also lets Apple forget the app).
 
 API docs: [lovearound.me/docs](https://lovearound.me/docs).
@@ -114,7 +124,7 @@ the watch in by code, sends one heart and signs out.
 `--demo <name>` draws one screen from made-up data, without signing in. On
 the iPhone: `signin notifyIntro home sent anyone empty signal paused book
 contact add toys board pair settings`; on the watch: `signin exists code
-expired computer connected circles sent anyone empty settings delete`.
+expired computer connected circles sent anyone empty signal settings glow delete`.
 Made-up people have Russian names in Russian and English ones elsewhere.
 
 ## Translations
@@ -132,7 +142,9 @@ dictionaries, so the same thing reads the same everywhere: «Кому-нибуд
 A signal carries no sender. The apps send only what the API needs. The
 iPhone keeps the account's Firebase refresh token in its Keychain, and my
 color, the pause and when it last sent to whom in `UserDefaults`; the watch
-keeps its device token and the account's email. Nothing else. Each bundle
+keeps its device token and the account's email, and my color. The server
+keeps Apple's push token of each (hashed as the key, the token itself to
+send). Nothing else. Each bundle
 says so in its `PrivacyInfo.xcprivacy`. See [lovearound.me/privacy](https://lovearound.me/privacy).
 
 ## License

@@ -19,7 +19,7 @@ case "$app" in
     *)
         bundle=me.lovearound.ios.watchkitapp
         os=watchOS
-        screens="signin exists code expired computer connected circles sent anyone empty settings delete"
+        screens="signin exists code expired computer connected circles sent anyone empty signal settings glow delete"
         ;;
 esac
 

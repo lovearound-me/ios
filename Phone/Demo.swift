@@ -51,9 +51,9 @@ struct Demo {
     ]
 
     static let devices: [Device] = [
-        Device(id: "d1", kind: "watch", name: "Apple Watch", capabilities: ["send"],
+        Device(id: "d1", kind: "watch", name: "Apple Watch", capabilities: ["receive", "send"],
                last_seen_at: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-300)),
-               requested_capabilities: ["send"]),
+               requested_capabilities: ["receive", "send"]),
         Device(id: "d2", kind: "lamp", name: Demo.said("Котик на полке", "Kitty on the shelf"), capabilities: ["receive"],
                last_seen_at: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-7200)),
                requested_capabilities: ["receive"], accept_anyone: true,

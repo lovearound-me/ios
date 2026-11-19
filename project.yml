@@ -143,6 +143,8 @@ targets:
       path: Watch/LoveAround.entitlements
       properties:
         com.apple.developer.applesignin: [Default]
+        # Hearts come to the watch as its own notifications.
+        aps-environment: development
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.watchkitapp

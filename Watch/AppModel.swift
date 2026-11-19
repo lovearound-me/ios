@@ -3,9 +3,8 @@ import SwiftUI
 import WatchKit
 
 /// Everything the watch shows, and the few things it does: sign in (Apple or
-/// a code), load the people, send a signal. An incoming one comes to the
-/// wrist as the iPhone's notification: watchOS keeps no connection open for
-/// an app, and the watch has no push of its own yet.
+/// a code), load the people, send a signal, play an incoming one. Incoming
+/// hearts come as the watch's own notifications (Push.swift).
 @MainActor
 final class AppModel: ObservableObject {
     enum Screen: Equatable {
@@ -41,6 +40,26 @@ final class AppModel: ObservableObject {
     @Published private(set) var justSent: String? = nil
     @Published private(set) var caption: String? = nil
 
+    // An incoming signal
+    @Published private(set) var incoming = false
+    /// Picks which emoji float up this time.
+    @Published private(set) var signalSeed = 0
+
+    /// The screen edges glow in it; stays on this watch, like on the iPhone.
+    @Published var myColor: Int {
+        didSet { UserDefaults.standard.set(myColor, forKey: "myColor") }
+    }
+    nonisolated static var savedColor: Int { UserDefaults.standard.object(forKey: "myColor") as? Int ?? 0 }
+
+    // Receiving on this watch
+    /// Its «Получать сердечки», as the server has it; nil until known.
+    @Published private(set) var receiving: Bool? = nil
+    /// watchOS doesn't let the app notify: the switch alone does nothing.
+    @Published private(set) var notificationsOff = false
+    /// Why the last switch didn't take.
+    @Published private(set) var receiveProblem: String? = nil
+    private var capabilities: [String] = []
+
     let demo: Demo?
     private var pairingTask: Task<Void, Never>?
     private var appleNonce = ""
@@ -50,10 +69,18 @@ final class AppModel: ObservableObject {
         let demo = Demo.fromArguments()
         let saved = demo == nil ? Session.load() : nil
         self.demo = demo
+        myColor = Self.savedColor
         screen = demo == nil && saved == nil ? .signIn : .main
         // Every stored property has its value from here on.
         session = saved
         demo?.apply(to: self)
+        if demo == nil {
+            let push = WatchPush.shared
+            push.onToken = { [weak self] token in Task { await self?.register(token) } }
+            push.onHeart = { [weak self] in self?.showSignal() }
+            push.onTap = { [weak self] in self?.showSignal() }
+            if saved != nil { Task { await startReceiving() } }
+        }
     }
 
     /// Close people first, each group in the owner's order.
@@ -156,6 +183,7 @@ final class AppModel: ObservableObject {
         self.session = session
         notice = nil
         pairing = nil
+        Task { await startReceiving() }
         guard welcome else {
             screen = .main
             return
@@ -183,14 +211,87 @@ final class AppModel: ObservableObject {
         contacts = []
         loaded = false
         sendingOff = false
+        receiving = nil
+        receiveProblem = nil
+        capabilities = []
+        if demo == nil { WatchPush.shared.forget() }
         self.notice = notice
         screen = .signIn
+    }
+
+    // MARK: Receiving
+
+    /// After sign-in and at each launch: watchOS's permission (asked once),
+    /// Apple's token for this watch to the server, and the switch's state.
+    func startReceiving() async {
+        guard demo == nil, session != nil else { return }
+        await WatchPush.shared.ask()
+        notificationsOff = !WatchPush.shared.allowed
+        await loadReceiving()
+    }
+
+    private func register(_ pushToken: String) async {
+        guard let session else { return }
+        try? await API(token: session.token).registerPush(pushToken, sandbox: WatchPush.sandbox)
+    }
+
+    private func loadReceiving() async {
+        guard let session, let me = try? await API(token: session.token).me() else { return }
+        capabilities = me.capabilities
+        receiving = me.receives
+    }
+
+    /// «Получать сердечки»: the same as «Принимает» in the watch's card on
+    /// the phone.
+    func setReceiving(_ on: Bool) {
+        guard receiving != on else { return }
+        receiveProblem = nil
+        let before = receiving
+        receiving = on
+        guard demo == nil, let session else { return }
+        var wanted = capabilities.filter { $0 != "receive" }
+        if on { wanted.append("receive") }
+        Task {
+            do {
+                let me = try await API(token: session.token).setCapabilities(wanted)
+                capabilities = me.capabilities
+                receiving = me.receives
+                if on, WatchPush.shared.token == nil { await startReceiving() }
+            } catch let error as APIError where error.sessionGone {
+                signOut(notice: tr("Часы отключены в «Устройствах». Войди снова."))
+            } catch APIError.status(400, _) {
+                receiving = before
+                receiveProblem = tr("Эти часы вошли только для отправки. Выйди и войди снова.")
+            } catch APIError.network {
+                receiving = before
+                receiveProblem = tr("Нет связи, проверь интернет")
+            } catch {
+                receiving = before
+                receiveProblem = tr("Не получилось. Попробуй ещё раз.")
+            }
+        }
+    }
+
+    // MARK: An incoming signal
+
+    /// The wrist tap, the glowing edges and the emoji: a heart that came
+    /// while the app was in front, a tapped notification, «Показать», the demo.
+    func showSignal() {
+        signalSeed = Int.random(in: 0..<1000)
+        incoming = true
+        WKInterfaceDevice.current().play(.notification)
+        let seed = signalSeed
+        Task {
+            try? await Task.sleep(nanoseconds: 5_500_000_000)
+            if signalSeed == seed { incoming = false }
+        }
     }
 
     // MARK: The people
 
     func refresh() async {
         guard demo == nil, let session else { return }
+        Task { await loadReceiving() }
         do {
             contacts = try await API(token: session.token).contacts()
             loaded = true
@@ -292,6 +393,7 @@ final class AppModel: ObservableObject {
     func demoSet(session: Session?, contacts: [Contact], pairing: API.PairingCode? = nil,
                  expired: Bool = false, justSent: String? = nil, caption: String? = nil, screen: Screen) {
         self.session = session
+        self.receiving = session == nil ? nil : true
         self.contacts = contacts
         self.loaded = true
         self.pairing = pairing

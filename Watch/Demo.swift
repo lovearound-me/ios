@@ -6,7 +6,7 @@ struct Demo {
     let name: String
 
     static let names = ["signin", "exists", "code", "expired", "computer", "connected",
-                        "circles", "sent", "anyone", "empty", "settings", "delete"]
+                        "circles", "sent", "anyone", "empty", "signal", "settings", "glow", "delete"]
 
     /// A made-up name: the Russian one in Russian, the English one elsewhere.
     static func said(_ russian: String, _ english: String) -> String {
@@ -21,13 +21,14 @@ struct Demo {
 
     /// A screen reached by navigation, shown on its own.
     enum Page {
-        case computer, settings, delete
+        case computer, settings, glow, delete
     }
 
     var page: Page? {
         switch name {
         case "computer": return .computer
         case "settings": return .settings
+        case "glow": return .glow
         case "delete": return .delete
         default: return nil
         }
@@ -72,6 +73,12 @@ struct Demo {
                           caption: tr("Кому-нибудь на свете — улетело ✨"), screen: .main)
         case "empty":
             model.demoSet(session: Demo.session, contacts: [], screen: .main)
+        case "signal":
+            model.demoSet(session: Demo.session, contacts: people, screen: .main)
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                model.showSignal()
+            }
         default:
             model.demoSet(session: Demo.session, contacts: people, screen: .main)
         }

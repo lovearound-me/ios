@@ -43,22 +43,54 @@ struct API {
         try API.check(status, data)
     }
 
-    /// «Выйти»: the watch leaves the account's devices, and its token stops
-    /// working.
+    /// «Выйти»: the watch leaves the account's devices, its token stops
+    /// working, and the server forgets where its notifications went.
     func removeSelf() async throws {
         let (status, data) = try await API.send("DELETE", "v1/devices/self", bearer: token)
         try API.check(status, data)
     }
 
+    // MARK: This watch as a device
+
+    /// What the watch's card on the phone shows: what it does, and the most
+    /// it may do (what it asked for at pairing).
+    struct Me: Decodable, Equatable {
+        let capabilities: [String]
+        let requested_capabilities: [String]?
+
+        var receives: Bool { capabilities.contains("receive") }
+    }
+
+    func me() async throws -> Me {
+        let (status, data) = try await API.send("GET", "v1/devices/self", bearer: token)
+        try API.check(status, data)
+        return try JSONDecoder().decode(Me.self, from: data)
+    }
+
+    /// «Получать сердечки» on the watch: the same switch as «Принимает» in
+    /// its card on the phone. 400 if the watch never asked to receive.
+    func setCapabilities(_ capabilities: [String]) async throws -> Me {
+        let (status, data) = try await API.send("PATCH", "v1/devices/self", bearer: token,
+                                                body: ["capabilities": capabilities])
+        try API.check(status, data)
+        return try JSONDecoder().decode(Me.self, from: data)
+    }
+
+    /// Hearts come to this watch as its own notifications.
+    func registerPush(_ pushToken: String, sandbox: Bool) async throws {
+        let (status, data) = try await API.send("PUT", "v1/devices/self/push", bearer: token,
+                                                body: ["token": pushToken, "sandbox": sandbox])
+        try API.check(status, data)
+    }
+
     // MARK: Pairing by code
 
-    /// What this device asks for: it shows people and sends. An incoming
-    /// heart reaches the wrist as the iPhone's notification, not through
-    /// this app, so it doesn't ask to receive.
+    /// What this device asks for: it shows people and sends, and takes
+    /// hearts as its own notifications.
     static let deviceAsk: [String: Any] = [
         "name": "Apple Watch",
         "kind": "watch",
-        "capabilities": ["send"],
+        "capabilities": ["receive", "send"],
     ]
 
     struct PairingCode: Decodable, Equatable {

@@ -13,6 +13,23 @@ struct SettingsView: View {
 
     var body: some View {
         List {
+            if let on = model.receiving {
+                Section {
+                    Toggle(tr("Получать сердечки"), isOn: Binding(get: { on }, set: { model.setReceiving($0) }))
+                        .accessibilityIdentifier("receiveHere")
+                } footer: {
+                    Text(receiveNote(on))
+                }
+            }
+            NavigationLink {
+                GlowView()
+            } label: {
+                HStack(spacing: 8) {
+                    Circle().fill(Palette.color(model.myColor)).frame(width: 14, height: 14)
+                    Text(tr("Как светится"))
+                }
+            }
+            .accessibilityIdentifier("glow")
             if let email = model.session?.email {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(tr("Аккаунт"))
@@ -39,6 +56,54 @@ struct SettingsView: View {
         } message: {
             Text(tr("Часы пропадут из устройств аккаунта. Люди и аккаунт останутся."))
         }
+    }
+
+    private func receiveNote(_ on: Bool) -> String {
+        if let problem = model.receiveProblem { return problem }
+        if on && model.notificationsOff { return tr("Уведомления выключены. Включи их в приложении Watch на iPhone.") }
+        return tr("Часы получают сердечки сами, даже если iPhone их не принимает.")
+    }
+}
+
+/// «Как светится»: my color, the one the edges glow in when someone thinks
+/// of me, and a try of it. Stays on this watch.
+struct GlowView: View {
+    @EnvironmentObject var model: AppModel
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(Palette.all.indices, id: \.self) { i in
+                    Button {
+                        model.myColor = i
+                    } label: {
+                        ZStack {
+                            Circle().fill(Palette.color(i))
+                            if i == model.myColor {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Palette.all[i].name)
+                    .accessibilityAddTraits(i == model.myColor ? .isSelected : [])
+                }
+            }
+            Button(tr("Показать")) { model.showSignal() }
+                .padding(.top, 8)
+                .accessibilityIdentifier("glowTry")
+            Text(tr("Так светятся края экрана, когда о тебе думают."))
+                .font(.system(size: 12))
+                .foregroundStyle(Palette.muted)
+                .multilineTextAlignment(.center)
+                .padding(.top, 6)
+        }
+        .navigationTitle(tr("Как светится"))
     }
 }
 

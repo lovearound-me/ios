@@ -260,13 +260,13 @@ final class PhoneDemoUITests: XCTestCase {
         let does = app.element("deviceDoes")
         XCTAssertTrue(does.waitForExistence(timeout: 5))
         does.tap()
-        // The watch asked only to send: that is all there is to switch off.
-        let toggle = app.switches["doesSend"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.switches["doesReceive"].isEnabled)
-        let knob = toggle.switches.firstMatch
-        (knob.exists ? knob : toggle).tap()
-        XCTAssertEqual(toggle.value as? String, "0")
+        for id in ["doesReceive", "doesSend"] {
+            let toggle = app.switches[id]
+            XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+            let knob = toggle.switches.firstMatch
+            (knob.exists ? knob : toggle).tap()
+            XCTAssertEqual(toggle.value as? String, "0", id)
+        }
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(does.waitForExistence(timeout: 5))
         XCTAssertTrue(does.label.contains("Ничего не делает"), does.label)
