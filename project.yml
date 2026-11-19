@@ -3,7 +3,8 @@
 # Built in GitHub Actions (.github/workflows/build.yml) and on a Mac.
 #
 # The iPhone app is me.lovearound.ios; the watch app, me.lovearound.ios.watchkitapp,
-# travels inside it (one App Store record) and also runs without it.
+# travels inside it (one App Store record) and also runs without it. So does
+# me.lovearound.ios.notify, which writes a heart's notification (Notify/).
 name: LoveAround
 
 options:
@@ -32,12 +33,15 @@ targets:
     sources:
       - path: Shared
       - path: Phone
+      - path: Notify/Emoji.swift
+      - path: Notify/NotifyLook.swift
       - path: i18n
         type: folder
         buildPhase: resources
     dependencies:
       # Embedded as the companion watch app (Embed Watch Content).
       - target: LoveAroundWatch
+      - target: LoveAroundNotify
     info:
       path: Phone/Info.plist
       properties:
@@ -64,11 +68,48 @@ targets:
         # Links to lovearound.me open the app once the site's
         # /.well-known/apple-app-site-association names it.
         com.apple.developer.associated-domains: ["applinks:lovearound.me"]
+        # Notifications; an App Store build gets "production" when signed.
+        aps-environment: development
+        # The notification look, read by the extension.
+        com.apple.security.application-groups: [group.me.lovearound.ios]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_NAME: LoveAround
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+
+  # A heart's notification comes as a bare «♥»; this writes it the way
+  # Settings → «Уведомление» says (Notify/NotificationService.swift).
+  LoveAroundNotify:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Notify
+      - path: Shared/Strings.swift
+      - path: i18n
+        type: folder
+        buildPhase: resources
+    info:
+      path: Notify/Info.plist
+      properties:
+        CFBundleDisplayName: Love Around
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, es, pt, de, fr, it, pl, tr, uk, ru, id, ko, zh]
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    entitlements:
+      path: Notify/LoveAroundNotify.entitlements
+      properties:
+        com.apple.security.application-groups: [group.me.lovearound.ios]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.notify
+        PRODUCT_NAME: LoveAroundNotify
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: NO
 

@@ -88,21 +88,64 @@ final class PhoneDemoUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Дима"].waitForExistence(timeout: 5))
     }
 
-    /// Settings: off, and the home screen says so, with a way back on.
+    /// Settings → «Что делает»: off, and the home screen says so, with a way
+    /// back on.
     func testReceiveHereOff() {
         let app = XCUIApplication.russian(demo: "settings")
+        let does = app.element("settingsDoes")
+        XCTAssertTrue(does.waitForExistence(timeout: 10))
+        does.tap()
         let receive = app.switches["receiveHere"]
-        XCTAssertTrue(receive.waitForExistence(timeout: 10))
+        XCTAssertTrue(receive.waitForExistence(timeout: 5))
         XCTAssertEqual(receive.value as? String, "1")
         let knob = receive.switches.firstMatch
         (knob.exists ? knob : receive).tap()
         XCTAssertEqual(receive.value as? String, "0")
-        XCTAssertFalse(app.switches["acceptAnyone"].isEnabled)
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.element("settingsWho").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("settingsWho").label.contains("Не принимает сердечки"), app.element("settingsWho").label)
+        XCTAssertFalse(app.element("pause").isEnabled)
         app.openTab("Сердечки")
         let banner = app.staticTexts["Этот iPhone не получает сердечки."]
         XCTAssertTrue(banner.waitForExistence(timeout: 5))
         app.buttons["Включить"].tap()
         XCTAssertTrue(banner.waitForNonExistence(timeout: 5))
+    }
+
+    /// Settings → «Уведомление»: the pick is checked, and the row says it.
+    func testNotifyLookPicks() {
+        let app = XCUIApplication.russian(demo: "settings")
+        let row = app.element("settingsLook")
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        XCTAssertTrue(row.label.contains("Много эмодзи"), row.label)
+        row.tap()
+        let three = app.element("look-three")
+        XCTAssertTrue(three.waitForExistence(timeout: 5))
+        XCTAssertFalse(three.isSelected)
+        three.tap()
+        XCTAssertTrue(three.isSelected)
+        XCTAssertFalse(app.element("look-many").isSelected)
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertTrue(row.label.contains("Три эмодзи"), row.label)
+    }
+
+    /// Settings → «Кто может достучаться» → «Тихие часы»: the times show,
+    /// and the row says when.
+    func testQuietHoursOnThisIPhone() {
+        let app = XCUIApplication.russian(demo: "settings")
+        let row = app.element("settingsWho")
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        XCTAssertTrue(row.label.contains("круглые сутки"), row.label)
+        row.tap()
+        let quiet = app.switches["quietHours"]
+        XCTAssertTrue(quiet.waitForExistence(timeout: 5))
+        let knob = quiet.switches.firstMatch
+        (knob.exists ? knob : quiet).tap()
+        XCTAssertTrue(app.element("quietFrom").waitForExistence(timeout: 5))
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertTrue(row.label.contains("тихо 23:00–08:00"), row.label)
     }
 
     func testBookMakesSomeoneClose() {

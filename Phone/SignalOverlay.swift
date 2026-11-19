@@ -10,17 +10,8 @@ struct SignalOverlay: View {
 
     @State private var bright = false
 
-    /// The Mac's mix: hearts among hugs, cats, flowers and treats, so it reads
-    /// as warmth from anyone close, not only love.
-    static let warm = [
-        "❤️", "🧡", "💛", "💚", "💙", "💜", "💖", "💕", "💗",
-        "🫂", "🤗", "🫶", "🥰", "😊", "☺️",
-        "😺", "😸", "😻", "😽", "🐈", "🐱",
-        "🐶", "🐻", "🐼", "🦔", "🐰", "🦊", "🐥", "🧸",
-        "💪", "🙌", "👍", "✊", "👏",
-        "☀️", "🌻", "🌷", "🌸", "🌼", "🌈", "🍀", "✨", "⭐️",
-        "☕️", "🍵", "🍪", "🍰", "🍓", "🎈",
-    ]
+    /// The Mac's mix (Notify/Emoji.swift), shared with the notifications.
+    static let warm = Emoji.warm
 
     /// Twelve: enough to feel like a shower, few enough to stay smooth.
     static let count = 12

@@ -8,7 +8,7 @@ struct Demo {
 
     static let names = ["signin", "home", "sent", "anyone", "empty", "signal", "paused", "offHere",
                         "book", "contact", "add", "choose", "toys", "board", "pair", "device", "deviceWho",
-                        "deviceDoes", "deviceBoard", "settings"]
+                        "deviceDoes", "deviceBoard", "settings", "settingsWho", "notifyLook"]
 
     static func fromArguments() -> Demo? {
         let args = ProcessInfo.processInfo.arguments
@@ -97,8 +97,11 @@ struct Demo {
         case "deviceBoard":
             model.demoSet(signedIn: true, contacts: people, devices: Demo.devices, tab: .toys)
             model.toysPath = ["d3"]
-        case "settings":
-            model.demoSet(signedIn: true, contacts: people, tab: .settings)
+        case "settings", "settingsWho", "notifyLook":
+            let quiet = name == "settingsWho" ? QuietHours(from: "23:00", to: "08:00", tz: TimeZone.current.identifier) : nil
+            model.demoSet(signedIn: true, contacts: people, tab: .settings, quietHours: quiet)
+            model.notifyLook = .many
+            model.settingsPath = name == "settingsWho" ? [.who] : name == "notifyLook" ? [.look] : []
         default:
             model.demoSet(signedIn: true, contacts: people)
         }

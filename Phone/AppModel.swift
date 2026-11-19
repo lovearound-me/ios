@@ -65,6 +65,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var devicesProblem: String?
     /// The device cards open in «Игрушки», by id (a demo opens one itself).
     @Published var toysPath: [String] = []
+    /// The pages open in «Настройки».
+    @Published var settingsPath: [SettingsPage] = []
 
     @Published var tab: Tab = .hearts
     @Published var adding: Adding?
@@ -104,6 +106,7 @@ final class AppModel: ObservableObject {
                 goingOffline?.cancel()
                 offline = false
             }
+            syncPush()
         }
     }
     /// Take signals from «Кому-нибудь на свете» too: the server asks the stream.
@@ -112,10 +115,27 @@ final class AppModel: ObservableObject {
             defaults.set(acceptAnyone, forKey: "acceptAnyone")
             stream.anyone = acceptAnyone
             stream.restart()
+            syncPush()
         }
     }
     @Published private(set) var anyoneSentAt: Date? { didSet { defaults.set(anyoneSentAt, forKey: "anyoneSentAt") } }
-    @Published private(set) var pausedUntil: Date? { didSet { defaults.set(pausedUntil, forKey: "pausedUntil") } }
+    @Published private(set) var pausedUntil: Date? {
+        didSet {
+            defaults.set(pausedUntil, forKey: "pausedUntil")
+            syncPush()
+        }
+    }
+    /// A daily window when this iPhone neither glows nor notifies, and
+    /// nothing comes later. Stays on this phone; the server gets it for the
+    /// notifications. Its other devices have their own.
+    @Published var quietHours: QuietHours? {
+        didSet {
+            defaults.set(quietHours.flatMap { try? JSONEncoder().encode($0) }, forKey: "quietHours")
+            syncPush()
+        }
+    }
+    /// How a heart's notification reads; the notification extension reads it.
+    @Published var notifyLook: NotifyLook { didSet { NotifyLook.current = notifyLook } }
     /// When each contact last got a signal from here: the book puts them first.
     private var lastSent: [String: Date] { didSet { defaults.set(lastSent, forKey: "lastSent") } }
 
@@ -128,6 +148,10 @@ final class AppModel: ObservableObject {
     private var goingOffline: Task<Void, Never>?
     private var saving: Task<Void, Never>?
     private var reorderSave: Task<Void, Never>?
+    let push = Push.shared
+    private var pushSync: Task<Void, Never>?
+    /// What the server last took for this iPhone's notifications.
+    private var pushSent: [String: String]?
 
     init() {
         api = API(auth: auth)
@@ -138,6 +162,8 @@ final class AppModel: ObservableObject {
         acceptAnyone = defaults.object(forKey: "acceptAnyone") as? Bool ?? true
         anyoneSentAt = defaults.object(forKey: "anyoneSentAt") as? Date
         pausedUntil = defaults.object(forKey: "pausedUntil") as? Date
+        quietHours = (defaults.data(forKey: "quietHours")).flatMap { try? JSONDecoder().decode(QuietHours.self, from: $0) }
+        notifyLook = NotifyLook.current
         lastSent = defaults.dictionary(forKey: "lastSent") as? [String: Date] ?? [:]
 
         stream.anyone = acceptAnyone
@@ -154,9 +180,14 @@ final class AppModel: ObservableObject {
 
         if let demo {
             demo.apply(to: self)
-        } else if let session = auth.session {
-            signedIn = true
-            email = session.email
+        } else {
+            if let session = auth.session {
+                signedIn = true
+                email = session.email
+            }
+            push.onHeart = { [weak self] in self?.receive() }
+            push.onToken = { [weak self] in self?.syncPush() }
+            push.onTap = { [weak self] in self?.tapped() }
         }
     }
 
@@ -168,6 +199,7 @@ final class AppModel: ObservableObject {
         if let until = pausedUntil, until <= Date() { pausedUntil = nil }
         if receiveHere { stream.start() }
         Task { await reload() }
+        Task { await refreshPush() }
     }
 
     func wentToBackground() {
@@ -283,10 +315,22 @@ final class AppModel: ObservableObject {
 
     // MARK: Signals in
 
+    /// From the stream, or a notification while the app is in front; both
+    /// come for one heart, so a second one while it glows is the same heart.
     private func receive() {
         // Not shown, and not kept for later: a signal is about the moment.
-        guard !isPaused, !incoming else { return }
+        guard receiveHere, !isPaused, !isQuiet, !incoming else { return }
         showSignal()
+    }
+
+    /// A heart's notification was tapped: the app opens glowing.
+    private func tapped() {
+        guard signedIn, !incoming else { return }
+        Task {
+            // Once the app is on screen, not under the launch.
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            showSignal()
+        }
     }
 
     /// The glowing edges, the hearts, a tap in the hand.
@@ -334,6 +378,58 @@ final class AppModel: ObservableObject {
 
     func resume() {
         pausedUntil = nil
+    }
+
+    var isQuiet: Bool {
+        quietHours?.contains(Date()) == true
+    }
+
+    // MARK: Notifications
+
+    /// iOS's permission (asked once, right after signing in), then the token.
+    func refreshPush() async {
+        guard demo == nil, signedIn else { return }
+        await push.refresh()
+        if push.status == .notDetermined && receiveHere {
+            await push.ask()
+        }
+        syncPush()
+    }
+
+    func askForNotifications() async {
+        await push.ask()
+        syncPush()
+    }
+
+    /// Tells the server where and when this iPhone takes notifications, or
+    /// that it takes none. After a moment, so a turned wheel sends once.
+    func syncPush() {
+        guard demo == nil, signedIn, let token = push.token else { return }
+        pushSync?.cancel()
+        pushSync = Task {
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            guard !Task.isCancelled else { return }
+            let state = pushState(token)
+            guard state != pushSent else { return }
+            do {
+                if receiveHere {
+                    try await api.putPush(token: token, sandbox: Push.sandbox, anyone: acceptAnyone,
+                                          pausedUntil: isPaused ? pausedUntil : nil, quietHours: quietHours)
+                } else {
+                    try await api.deletePush(token: token)
+                }
+                pushSent = state
+            } catch {
+                // Tried again when the app next comes to the front.
+            }
+        }
+    }
+
+    private func pushState(_ token: String) -> [String: String] {
+        guard receiveHere else { return ["token": token, "off": "1"] }
+        return ["token": token, "anyone": acceptAnyone ? "1" : "0",
+                "paused": isPaused ? (pausedUntil?.timeIntervalSince1970).map { String($0) } ?? "" : "",
+                "quiet": quietHours.map { "\($0.from)-\($0.to)-\($0.tz)" } ?? ""]
     }
 
     // MARK: The book
@@ -715,6 +811,7 @@ final class AppModel: ObservableObject {
         tab = .hearts
         if receiveHere { stream.start() }
         Task { await reload() }
+        Task { await refreshPush() }
         if let invite = pendingAdd {
             pendingAdd = nil
             openAdding(invite)
@@ -724,8 +821,20 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// «Выйти»: this iPhone stops taking the account's notifications first,
+    /// while it still can say so.
+    func signOutHere() async {
+        if demo == nil, let token = push.token {
+            pushSync?.cancel()
+            try? await api.deletePush(token: token)
+        }
+        signOut()
+    }
+
     func signOut() {
         stream.stop()
+        pushSync?.cancel()
+        pushSent = nil
         auth.signOut()
         goingOffline?.cancel()
         offline = false
@@ -741,6 +850,7 @@ final class AppModel: ObservableObject {
         adding = nil
         choosingClose = false
         outgoing = nil
+        settingsPath = []
         tab = .hearts
     }
 
@@ -763,7 +873,7 @@ final class AppModel: ObservableObject {
 
     func demoSet(signedIn: Bool, contacts: [Contact], devices: [Device] = [], tab: Tab = .hearts,
                  justSent: String? = nil, outgoing: Outgoing? = nil, anyoneSentAt: Date? = nil, pausedUntil: Date? = nil,
-                 receiveHere: Bool = true) {
+                 receiveHere: Bool = true, quietHours: QuietHours? = nil) {
         self.signedIn = signedIn
         email = signedIn ? "anna@example.com" : nil
         provider = signedIn ? "apple.com" : nil
@@ -779,6 +889,7 @@ final class AppModel: ObservableObject {
         self.anyoneSentAt = anyoneSentAt
         self.receiveHere = receiveHere
         self.pausedUntil = pausedUntil
+        self.quietHours = quietHours
         lastSent = [:]
     }
 }
