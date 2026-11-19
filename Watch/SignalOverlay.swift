@@ -87,34 +87,56 @@ private struct FloatingEmoji: View {
 /// The long look of a heart's notification (category `signal`), when the
 /// app isn't in front: the glow in my color, and nothing about who.
 final class SignalNotificationController: WKUserNotificationHostingController<SignalNotificationView> {
+    /// The hearts the notification came with: the server's wave for this
+    /// watch, or the iPhone's text when the phone's notification is shown here.
+    private var wave = ""
+
     override var body: SignalNotificationView {
-        SignalNotificationView(color: Palette.color(AppModel.savedColor))
+        SignalNotificationView(color: Palette.color(AppModel.savedColor), wave: wave)
     }
 
     /// watchOS shows the dynamic view only once this has been called on it;
-    /// without it, it waits, then falls back to the static look. Nothing to
-    /// read: the heart says nothing but «♥».
-    override func didReceive(_ notification: UNNotification) {}
+    /// without it, it waits, then falls back to the static look.
+    override func didReceive(_ notification: UNNotification) {
+        wave = SignalNotificationView.hearts(in: notification.request.content.body)
+        setNeedsBodyUpdate()
+    }
 }
 
 struct SignalNotificationView: View {
     let color: Color
+    /// ✨💗💖💞💖💗✨ above the heart; empty for a bare «♥».
+    var wave = ""
 
     @State private var bright = false
 
+    /// The emoji of a notification's text, without the words the iPhone may
+    /// add after them (the view says them itself) and without a bare «♥».
+    static func hearts(in body: String) -> String {
+        let text = body.replacingOccurrences(of: tr("Кто-то думает о тебе"), with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return text == "♥" ? "" : text
+    }
+
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
+            if !wave.isEmpty {
+                Text(wave)
+                    .font(.system(size: 18))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
             ZStack {
                 Circle()
                     .fill(color)
-                    .frame(width: 64, height: 64)
-                    .blur(radius: 18)
+                    .frame(width: 56, height: 56)
+                    .blur(radius: 16)
                     .opacity(bright ? 0.9 : 0.35)
                 Image(systemName: "heart.fill")
-                    .font(.system(size: 40))
+                    .font(.system(size: wave.isEmpty ? 40 : 34))
                     .foregroundStyle(color)
             }
-            .frame(height: 84)
+            .frame(height: wave.isEmpty ? 84 : 70)
             Text(tr("Кто-то думает о тебе"))
                 .font(.system(size: 16, weight: .semibold))
                 .multilineTextAlignment(.center)

@@ -125,7 +125,7 @@ the watch in by code, sends one heart and signs out.
 `--demo <name>` draws one screen from made-up data, without signing in. On
 the iPhone: `signin notifyIntro home sent anyone empty signal paused book
 contact add toys board pair settings`; on the watch: `signin exists code
-expired computer connected circles sent anyone empty signal settings glow delete`.
+expired computer connected circles sent anyone empty signal notification settings glow delete`.
 Made-up people have Russian names in Russian and English ones elsewhere.
 
 ## Translations

@@ -60,6 +60,8 @@ struct DemoPageView: View {
                 case .computer: ComputerView(code: Demo.code.code)
                 case .settings: SettingsView()
                 case .glow: GlowView()
+                case .notification:
+                    SignalNotificationView(color: Palette.color(model.myColor), wave: "✨💗💖💞💖💗✨")
                 case .delete: DeleteAccountView()
                 }
             }

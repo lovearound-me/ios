@@ -6,7 +6,7 @@ struct Demo {
     let name: String
 
     static let names = ["signin", "exists", "code", "expired", "computer", "connected",
-                        "circles", "sent", "anyone", "empty", "signal", "settings", "glow", "delete"]
+                        "circles", "sent", "anyone", "empty", "signal", "notification", "settings", "glow", "delete"]
 
     /// A made-up name: the Russian one in Russian, the English one elsewhere.
     static func said(_ russian: String, _ english: String) -> String {
@@ -21,7 +21,7 @@ struct Demo {
 
     /// A screen reached by navigation, shown on its own.
     enum Page {
-        case computer, settings, glow, delete
+        case computer, settings, glow, notification, delete
     }
 
     var page: Page? {
@@ -29,6 +29,7 @@ struct Demo {
         case "computer": return .computer
         case "settings": return .settings
         case "glow": return .glow
+        case "notification": return .notification
         case "delete": return .delete
         default: return nil
         }
