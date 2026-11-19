@@ -4,11 +4,16 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @State private var confirmSignOut = false
+    // Pushed the way MainView pushes this page (navigationDestination), not
+    // with NavigationLink(destination:): mixed in one stack, opening «Мой цвет»
+    // kept the app busy for 24 s and more in CI's watch simulator.
+    @State private var showColors = false
+    @State private var showDelete = false
 
     var body: some View {
         List {
-            NavigationLink {
-                ColorPickerView()
+            Button {
+                showColors = true
             } label: {
                 HStack(spacing: 8) {
                     Circle().fill(Palette.color(model.myColor)).frame(width: 14, height: 14)
@@ -29,13 +34,15 @@ struct SettingsView: View {
             }
             Button(tr("Выйти")) { confirmSignOut = true }
                 .accessibilityIdentifier("signOut")
-            NavigationLink {
-                DeleteAccountView()
+            Button {
+                showDelete = true
             } label: {
                 Text(tr("Удалить аккаунт")).foregroundStyle(.red)
             }
         }
         .navigationTitle(tr("Настройки"))
+        .navigationDestination(isPresented: $showColors) { ColorPickerView() }
+        .navigationDestination(isPresented: $showDelete) { DeleteAccountView() }
         .alert(tr("Выйти на этих часах?"), isPresented: $confirmSignOut) {
             Button(tr("Выйти"), role: .destructive) { model.signOut() }
             Button(tr("Отмена"), role: .cancel) {}
