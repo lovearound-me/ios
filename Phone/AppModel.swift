@@ -57,10 +57,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var signedIn = false
     @Published private(set) var email: String?
     @Published private(set) var provider: String?
-    @Published private(set) var inviteURL: String?
-    @Published private(set) var contacts: [Contact] = []
+    @Published private(set) var inviteURL: String? { didSet { keepForNextStart() } }
+    @Published private(set) var contacts: [Contact] = [] { didSet { keepForNextStart() } }
     @Published private(set) var loaded = false
-    @Published private(set) var devices: [Device] = []
+    @Published private(set) var devices: [Device] = [] { didSet { keepForNextStart() } }
     @Published private(set) var devicesLoaded = false
     @Published private(set) var devicesProblem: String?
     /// The device cards open in «Игрушки», by id (a demo opens one itself).
@@ -150,6 +150,7 @@ final class AppModel: ObservableObject {
     private var goingOffline: Task<Void, Never>?
     private var saving: Task<Void, Never>?
     private var reorderSave: Task<Void, Never>?
+    private var cacheSave: Task<Void, Never>?
     let push = Push.shared
     private var pushSync: Task<Void, Never>?
     /// What the server last took for this iPhone's notifications.
@@ -187,6 +188,7 @@ final class AppModel: ObservableObject {
             if let session = auth.session {
                 signedIn = true
                 email = session.email
+                drawLastSeen()
             }
             push.onHeart = { [weak self] in self?.receive() }
             push.onToken = { [weak self] in self?.syncPush() }
@@ -219,6 +221,7 @@ final class AppModel: ObservableObject {
             inviteURL = me.invite_url
             contacts = try await api.contacts()
             loaded = true
+            keepForNextStart()
             provider = auth.provider
         } catch let error as AuthError where error.endsSession {
             signOut()
@@ -624,6 +627,7 @@ final class AppModel: ObservableObject {
         do {
             devices = try await api.devices()
             devicesLoaded = true
+            keepForNextStart()
             devicesProblem = nil
         } catch let error as AuthError where error.endsSession {
             signOut()
@@ -844,6 +848,8 @@ final class AppModel: ObservableObject {
         stream.stop()
         pushSync?.cancel()
         pushSent = nil
+        cacheSave?.cancel()
+        try? FileManager.default.removeItem(at: Self.cacheURL)
         auth.signOut()
         goingOffline?.cancel()
         offline = false
@@ -876,6 +882,49 @@ final class AppModel: ObservableObject {
 
     var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+    }
+
+    // MARK: What was there last time
+
+    /// The book, the devices and the Love ID as the server last gave them:
+    /// drawn at once on the next start, then replaced by the server's, so the
+    /// screens don't start empty and fill in. On this iPhone only, and gone
+    /// on signing out.
+    private struct LastSeen: Codable {
+        var invite: String?
+        var contacts: [Contact]
+        var devices: [Device]?
+    }
+
+    private static var cacheURL: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("last-seen.json")
+    }
+
+    private func drawLastSeen() {
+        guard let data = try? Data(contentsOf: Self.cacheURL),
+              let last = try? JSONDecoder().decode(LastSeen.self, from: data) else { return }
+        inviteURL = last.invite
+        contacts = last.contacts
+        loaded = true
+        if let devices = last.devices {
+            self.devices = devices
+            devicesLoaded = true
+        }
+    }
+
+    /// After a moment: a new order changes many contacts one by one.
+    private func keepForNextStart() {
+        guard demo == nil, signedIn, loaded else { return }
+        cacheSave?.cancel()
+        let last = LastSeen(invite: inviteURL, contacts: contacts, devices: devicesLoaded ? devices : nil)
+        cacheSave = Task {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled, let data = try? JSONEncoder().encode(last) else { return }
+            let url = Self.cacheURL
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        }
     }
 
     // MARK: Demo
