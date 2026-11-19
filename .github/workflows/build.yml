@@ -58,6 +58,9 @@ jobs:
       - name: Watch UI tests on made-up data
         run: |
           udid=$(scripts/simulator.py watchOS)
+          scripts/ci-sample-watch.sh build/watch-samples &
+          sampler=$!
+          trap 'kill $sampler 2>/dev/null || true' EXIT
           xcodebuild test -project LoveAround.xcodeproj -scheme LoveAroundWatch \
             -destination "id=$udid" -derivedDataPath build CODE_SIGNING_ALLOWED=NO \
             -only-testing:LoveAroundWatchUITests/DemoUITests -resultBundlePath build/watch-ui-tests.xcresult -quiet
@@ -88,5 +91,7 @@ jobs:
         if: failure()
         with:
           name: ui-tests
-          path: build/*-ui-tests.xcresult
+          path: |
+            build/*-ui-tests.xcresult
+            build/watch-samples
           if-no-files-found: ignore
