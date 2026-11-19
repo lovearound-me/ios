@@ -133,20 +133,21 @@ struct AnyoneCircle: View {
                             .font(.system(size: 14))
                             .foregroundStyle(Theme.ink)
                             .lineLimit(1)
-                        if let wait {
-                            Text(tr("через {n} мин", ["n": String(wait)]))
-                                .font(.system(size: 12))
-                                .foregroundStyle(Theme.muted)
-                        }
+                        // The line is always there, empty while the star is
+                        // ready: a cell that grows after a send leaves the
+                        // grid's last row over the hint below it.
+                        Text(wait.map { tr("через {n} мин", ["n": String($0)]) } ?? " ")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.muted)
                     }
                 }
             }
             .buttonStyle(PressScale())
             .disabled(wait != nil)
-            .accessibilityElement(children: .ignore)
+            // On the button itself: a new element in its place would read as
+            // enabled while it waits.
             .accessibilityLabel(tr("Кому-нибудь на свете"))
             .accessibilityValue(wait.map { tr("через {n} мин", ["n": String($0)]) } ?? "")
-            .accessibilityAddTraits(.isButton)
             .accessibilityIdentifier("anyone")
         }
     }
