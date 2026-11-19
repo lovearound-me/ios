@@ -104,6 +104,7 @@ struct EmailSignInView: View {
             Form {
                 Section {
                     TextField(tr("Почта"), text: $email)
+                        .font(.app(17))
                         .textContentType(.username)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
@@ -113,6 +114,7 @@ struct EmailSignInView: View {
                         .onSubmit { field = .password }
                         .accessibilityIdentifier("email")
                     SecureField(tr("Пароль"), text: $password)
+                        .font(.app(17))
                         .textContentType(.password)
                         .focused($field, equals: .password)
                         .submitLabel(.go)
@@ -120,6 +122,7 @@ struct EmailSignInView: View {
                         .accessibilityIdentifier("password")
                 } footer: {
                     Text(tr("Не меньше 8 символов"))
+                        .font(.app(13))
                 }
                 .listRowBackground(Theme.field)
                 Section {
@@ -128,18 +131,20 @@ struct EmailSignInView: View {
                     } label: {
                         HStack {
                             Text(model.busy ? tr("Входим…") : tr("Войти или создать аккаунт"))
+                                .font(.app(17))
                             Spacer()
                             if model.busy { ProgressView() }
                         }
                     }
                     .disabled(model.busy)
                     .accessibilityIdentifier("emailSubmit")
-                    Button(tr("Забыли пароль?")) { forgot() }
+                    Button { forgot() } label: { Text(tr("Забыли пароль?")).font(.app(17)) }
                         .disabled(model.busy)
                         .accessibilityIdentifier("forgotPassword")
                 } footer: {
                     if let note {
                         Text(note)
+                            .font(.app(13))
                             .foregroundStyle(noteIsProblem ? Theme.danger : Theme.muted)
                             .accessibilityIdentifier("emailNote")
                     }
@@ -149,7 +154,7 @@ struct EmailSignInView: View {
             .tint(Theme.link)
             .scrollContentBackground(.hidden)
             .background(Theme.paper.ignoresSafeArea())
-            .navigationTitle(tr("Вход по почте"))
+            .navigationTitle(tr("Почта и пароль"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

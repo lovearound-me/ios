@@ -63,6 +63,7 @@ struct SettingsView: View {
                         .accessibilityIdentifier("settingsPrivacy")
                 } footer: {
                     Text(verbatim: "Love Around \(model.version)")
+                        .font(.app(13))
                 }
                 .listRowBackground(Theme.field)
             }

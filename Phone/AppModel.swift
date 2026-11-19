@@ -144,13 +144,15 @@ final class AppModel: ObservableObject {
         }
     }
     /// How a heart's notification reads; the notification extension reads it.
-    @Published var notifyLook: NotifyLook { didSet { NotifyLook.current = notifyLook } }
+    @Published var notifyLook: NotifyLook { didSet { if demo == nil { NotifyLook.current = notifyLook } } }
     /// «Со словами»: «Кто-то думает о тебе» after the emoji.
-    @Published var notifyWords: Bool { didSet { NotifyLook.withWords = notifyWords } }
+    @Published var notifyWords: Bool { didSet { if demo == nil { NotifyLook.withWords = notifyWords } } }
     /// When each contact last got a signal from here: the book puts them first.
     private var lastSent: [String: Date] { didSet { defaults.set(lastSent, forKey: "lastSent") } }
 
-    private let defaults = UserDefaults.standard
+    /// A demo run (`--demo`) keeps its own, emptied at each launch: tests
+    /// and screenshots on a signed-in phone leave its settings alone.
+    private let defaults: UserDefaults
     private var appleNonce = ""
     private var pendingAdd: String?
     private var pendingPair: String?
@@ -169,6 +171,12 @@ final class AppModel: ObservableObject {
         api = API(auth: auth)
         stream = Stream(auth: auth)
         demo = Demo.fromArguments()
+        if demo != nil, let scratch = UserDefaults(suiteName: "me.lovearound.demo") {
+            scratch.removePersistentDomain(forName: "me.lovearound.demo")
+            defaults = scratch
+        } else {
+            defaults = .standard
+        }
         myColor = defaults.object(forKey: "myColor") as? Int ?? 1
         receiveHere = defaults.object(forKey: "receiveHere") as? Bool ?? true
         acceptAnyone = defaults.object(forKey: "acceptAnyone") as? Bool ?? true
@@ -914,10 +922,14 @@ final class AppModel: ObservableObject {
         stream.stop()
         pushSync?.cancel()
         pushSent = nil
-        if demo == nil { push.forget() }
         cacheSave?.cancel()
-        try? FileManager.default.removeItem(at: Self.cacheURL)
-        auth.signOut()
+        // A demo's «Выйти» only shows the sign-in screen: the phone's real
+        // session, cache and notifications stay as they are.
+        if demo == nil {
+            push.forget()
+            try? FileManager.default.removeItem(at: Self.cacheURL)
+            auth.signOut()
+        }
         goingOffline?.cancel()
         offline = false
         signedIn = false

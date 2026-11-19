@@ -47,7 +47,7 @@ final class AppModel: ObservableObject {
 
     /// The screen edges glow in it; stays on this watch, like on the iPhone.
     @Published var myColor: Int {
-        didSet { UserDefaults.standard.set(myColor, forKey: "myColor") }
+        didSet { if demo == nil { UserDefaults.standard.set(myColor, forKey: "myColor") } }
     }
     nonisolated static var savedColor: Int { UserDefaults.standard.object(forKey: "myColor") as? Int ?? 0 }
 
@@ -206,7 +206,9 @@ final class AppModel: ObservableObject {
 
     /// Forgets this watch's token.
     func signOut(notice: String? = nil) {
-        Session.clear()
+        // A demo's «Выйти» only shows the sign-in screen: the watch's real
+        // token stays, so a test can't leave a ghost device on the account.
+        if demo == nil { Session.clear() }
         session = nil
         contacts = []
         loaded = false
