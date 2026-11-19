@@ -148,7 +148,7 @@ struct EmailSignInView: View {
             }
             .tint(Theme.link)
             .scrollContentBackground(.hidden)
-            .background(Theme.paper)
+            .background(Theme.paper.ignoresSafeArea())
             .navigationTitle(tr("Вход по почте"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -158,6 +158,8 @@ struct EmailSignInView: View {
             }
             .onAppear { field = .email }
         }
+        // The sheet's own white showed under the form.
+        .presentationBackground(Theme.paper)
     }
 
     private var address: String { email.trimmingCharacters(in: .whitespacesAndNewlines) }
