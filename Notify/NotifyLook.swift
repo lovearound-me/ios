@@ -30,8 +30,8 @@ enum NotifyLook: String, CaseIterable, Identifiable {
 
     var name: String {
         switch self {
-        case .many: return tr("Много эмодзи")
-        case .three: return tr("Три эмодзи")
+        case .many: return tr("Волна сердечек")
+        case .three: return tr("Три сердечка")
         case .one: return tr("Одно сердечко")
         case .plain: return tr("Простое ♥")
         }
@@ -40,8 +40,8 @@ enum NotifyLook: String, CaseIterable, Identifiable {
     /// For the list in Settings: one fixed example each.
     var example: String {
         switch self {
-        case .many: return "💗🫶😺🌷🧡🤗🐻✨💕☕️🥰🌼"
-        case .three: return "🧡🫶😺"
+        case .many: return "✨💗💖💞💖💗✨"
+        case .three: return "💕💖💕"
         case .one: return "💗"
         case .plain: return "♥"
         }
@@ -51,14 +51,13 @@ enum NotifyLook: String, CaseIterable, Identifiable {
         self == .plain ? tr("Для браслетов, которые не рисуют эмодзи") : nil
     }
 
-    /// The notification's text: twelve emoji, as many as float up in the
-    /// app; three; one heart; «♥» from the plain font every band has. Then
-    /// the words, if asked.
+    /// The notification's text: the wave; three hearts; one heart; «♥» from
+    /// the plain font every band has. Then the words, if asked.
     func text(words: Bool) -> String {
         let emoji: String
         switch self {
-        case .many: emoji = Emoji.warm.shuffled().prefix(12).joined()
-        case .three: emoji = Emoji.warm.shuffled().prefix(3).joined()
+        case .many: emoji = Emoji.wave()
+        case .three: emoji = Emoji.three()
         case .one: emoji = Emoji.hearts.randomElement() ?? "💗"
         case .plain: emoji = "♥"
         }

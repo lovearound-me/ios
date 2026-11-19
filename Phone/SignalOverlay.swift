@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// An incoming signal: the screen edges glow in my color, twelve emoji float
+/// An incoming signal: the screen edges glow in my color, eight hearts float
 /// up, and in the middle a heart says someone is thinking of you. Never who.
 /// A tap closes it; it fades by itself after a few seconds.
 struct SignalOverlay: View {
@@ -10,11 +10,11 @@ struct SignalOverlay: View {
 
     @State private var bright = false
 
-    /// The Mac's mix (Notify/Emoji.swift), shared with the notifications.
-    static let warm = Emoji.warm
+    /// Hearts only, as in the notification (Notify/Emoji.swift).
+    static let warm = Emoji.pink
 
-    /// Twelve: enough to feel like a shower, few enough to stay smooth.
-    static let count = 12
+    /// Eight: a few hearts that each get seen, not a crowd.
+    static let count = 8
 
     var body: some View {
         GeometryReader { geo in

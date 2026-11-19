@@ -82,9 +82,6 @@ final class AppModel: ObservableObject {
     /// Why the sign-in failed, under its buttons.
     @Published var signInProblem: String?
     @Published var busy = false
-    /// The site's sign-in page is open in a sheet over the app and has not
-    /// answered yet.
-    @Published private(set) var waitingForBrowser = false
     /// Before iOS asks about notifications: what they are for, once after
     /// signing in.
     @Published private(set) var notifyIntro = false
@@ -775,11 +772,6 @@ final class AppModel: ObservableObject {
             // The whole link, not url.path: its leading "/" would leave inviteID an empty id.
             guard let invite = Self.inviteID(from: url.absoluteString) else { return }
             openAdding(invite)
-        case "signin":
-            // Safari can hand the same link over twice; the first one signs in
-            // and uses up the state, so a late copy is no news.
-            if signedIn && !waitingForBrowser { return }
-            Task { await finishOnSite(url) }
         default:
             break
         }
@@ -844,35 +836,50 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Google or email: the site's page in a sheet over the app (`open`,
-    /// the system's sign-in sheet), which answers with lovearound://signin.
-    func signInOnSite(_ open: (URL) async throws -> URL) async {
+    /// «Войти через Google»: Google's account chooser over the app.
+    func signInWithGoogle() async {
         signInProblem = nil
-        waitingForBrowser = true
+        busy = true
+        defer { busy = false }
         do {
-            await finishOnSite(try await open(auth.browserSignInURL()))
-        } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
+            let token = try await GoogleAccount.idToken()
+            try await auth.signIn(google: token)
+            didSignIn()
+        } catch GoogleAccount.Failure.cancelled {
             // Closed by the person: nothing to say.
-            waitingForBrowser = false
+        } catch let error as AuthError {
+            signInProblem = error.localizedDescription
         } catch {
-            waitingForBrowser = false
             signInProblem = tr("Не получилось войти. Попробуй ещё раз.")
         }
     }
 
-    private func finishOnSite(_ url: URL) async {
+    /// «Войти по почте»: signs in, or makes the account. What went wrong, for
+    /// the form, or nil once in.
+    func signInWithEmail(_ email: String, password: String) async -> String? {
+        busy = true
+        defer { busy = false }
         do {
-            try await auth.completeBrowser(url)
+            try await auth.signIn(email: email, password: password)
             didSignIn()
+            return nil
         } catch {
-            if !signedIn { signInProblem = error.localizedDescription }
+            return error.localizedDescription
         }
-        waitingForBrowser = false
+    }
+
+    /// «Забыли пароль?»: what to tell the person.
+    func sendPasswordReset(_ email: String) async -> String {
+        do {
+            try await auth.sendPasswordReset(email: email)
+            return tr("Письмо для нового пароля отправлено")
+        } catch {
+            return error.localizedDescription
+        }
     }
 
     private func didSignIn() {
         signInProblem = nil
-        waitingForBrowser = false
         signedIn = true
         email = auth.session?.email
         provider = auth.provider

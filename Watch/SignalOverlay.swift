@@ -11,20 +11,11 @@ struct SignalOverlay: View {
 
     @State private var bright = false
 
-    /// The Mac's mix: hearts among hugs, cats, flowers and treats, so it reads
-    /// as warmth from anyone close, not only love.
-    static let warm = [
-        "❤️", "🧡", "💛", "💚", "💙", "💜", "💖", "💕", "💗",
-        "🫂", "🤗", "🫶", "🥰", "😊", "☺️",
-        "😺", "😸", "😻", "😽", "🐈", "🐱",
-        "🐶", "🐻", "🐼", "🦔", "🐰", "🦊", "🐥", "🧸",
-        "💪", "🙌", "👍", "✊", "👏",
-        "☀️", "🌻", "🌷", "🌸", "🌼", "🌈", "🍀", "✨", "⭐️",
-        "☕️", "🍵", "🍪", "🍰", "🍓", "🎈",
-    ]
+    /// Hearts only, as in the iPhone's notification (Notify/Emoji.swift).
+    static let warm = ["💖", "💕", "💗", "💞", "💓", "💘", "🩷", "❤️", "💝"]
 
-    /// Twelve: enough to feel like a shower, few enough to stay smooth.
-    static let count = 12
+    /// Eight: a few hearts that each get seen, not a crowd.
+    static let count = 8
 
     var body: some View {
         GeometryReader { geo in

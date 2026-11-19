@@ -70,7 +70,10 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.3), value: model.notifyIntro)
         .animation(.easeInOut(duration: 0.3), value: model.howItWorks)
         .animation(.easeOut(duration: 0.4), value: model.outgoing)
-        .onOpenURL { model.handle(url: $0) }
+        .onOpenURL { url in
+            if GoogleAccount.handle(url) { return }
+            model.handle(url: url)
+        }
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
             if let url = activity.webpageURL { model.handle(url: url) }
         }

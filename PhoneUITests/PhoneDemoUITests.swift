@@ -117,7 +117,7 @@ final class PhoneDemoUITests: XCTestCase {
         let app = XCUIApplication.russian(demo: "settings")
         let row = app.element("settingsLook")
         XCTAssertTrue(row.waitForExistence(timeout: 10))
-        XCTAssertTrue(row.label.contains("Много эмодзи"), row.label)
+        XCTAssertTrue(row.label.contains("Волна сердечек"), row.label)
         row.tap()
         let three = app.element("look-three")
         XCTAssertTrue(three.waitForExistence(timeout: 5))
@@ -134,7 +134,7 @@ final class PhoneDemoUITests: XCTestCase {
         XCTAssertTrue(app.element("notifySample").label.hasSuffix("Кто-то думает о тебе"), app.element("notifySample").label)
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(row.waitForExistence(timeout: 5))
-        XCTAssertTrue(row.label.contains("Три эмодзи · со словами"), row.label)
+        XCTAssertTrue(row.label.contains("Три сердечка · со словами"), row.label)
     }
 
     /// Settings → «Кто может достучаться» → «Тихие часы»: the times show,
@@ -392,6 +392,27 @@ final class PhoneDemoUITests: XCTestCase {
         app.openTab("Настройки")
         XCTAssertTrue(app.element("settingsPrivacy").waitForExistence(timeout: 5))
         XCTAssertTrue(app.element("settingsHelp").exists)
+    }
+
+    /// The email form checks what it can before asking Firebase: nothing
+    /// here reaches the network.
+    func testEmailFormChecksFirst() {
+        let app = XCUIApplication.russian(demo: "signin")
+        XCTAssertTrue(app.element("googleSignIn").waitForExistence(timeout: 10))
+        app.element("emailSignIn").tap()
+        let submit = app.buttons["emailSubmit"]
+        XCTAssertTrue(submit.waitForExistence(timeout: 5))
+        submit.tap()
+        let note = app.element("emailNote")
+        XCTAssertTrue(note.waitForExistence(timeout: 5))
+        XCTAssertEqual(note.label, "Введи почту")
+        let email = app.textFields["email"]
+        email.tap()
+        email.typeText("anna.example.com")
+        submit.tap()
+        XCTAssertEqual(note.label, "Проверь адрес почты")
+        app.buttons["Отмена"].tap()
+        XCTAssertTrue(app.element("googleSignIn").waitForExistence(timeout: 5))
     }
 
     func testSignOut() {

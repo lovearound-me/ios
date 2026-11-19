@@ -18,6 +18,10 @@ packages:
   QRCodeGenerator:
     url: https://github.com/fwcd/swift-qrcode-generator
     from: 2.0.0
+  # «Войти через Google» on the iPhone: Google's account chooser over the app.
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 10.0.0
 
 settings:
   base:
@@ -42,6 +46,8 @@ targets:
       # Embedded as the companion watch app (Embed Watch Content).
       - target: LoveAroundWatch
       - target: LoveAroundNotify
+      - package: GoogleSignIn
+        product: GoogleSignIn
     info:
       path: Phone/Info.plist
       properties:
@@ -51,10 +57,15 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
-        # lovearound://add/<code> (an invite) and lovearound://signin (the site's sign-in page).
+        # lovearound://add/<code> (an invite), lovearound://pair/<code>; and
+        # Google's answer to its sign-in, at the reversed client id.
         CFBundleURLTypes:
           - CFBundleURLName: me.lovearound.ios
             CFBundleURLSchemes: [lovearound]
+          - CFBundleURLName: google
+            CFBundleURLSchemes: [com.googleusercontent.apps.989287714644-eltkdc86n86huc9iqvrll9tpgs9li3gq]
+        # The iPhone app's OAuth client in Firebase (GoogleService-Info.plist's CLIENT_ID): public.
+        GIDClientID: 989287714644-eltkdc86n86huc9iqvrll9tpgs9li3gq.apps.googleusercontent.com
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UILaunchScreen:
