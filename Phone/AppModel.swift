@@ -186,7 +186,6 @@ final class AppModel: ObservableObject {
             defaults = .standard
         }
         myColor = defaults.object(forKey: "myColor") as? Int ?? 1
-        if demo == nil { WidgetData.myColor = myColor }
         receiveHere = defaults.object(forKey: "receiveHere") as? Bool ?? true
         acceptAnyone = defaults.object(forKey: "acceptAnyone") as? Bool ?? true
         anyoneSentAt = defaults.object(forKey: "anyoneSentAt") as? Date
@@ -201,6 +200,8 @@ final class AppModel: ObservableObject {
 
         stream.anyone = acceptAnyone
         stream.onSignal = { [weak self] in self?.receive() }
+        // For the widgets, from before they were there.
+        if demo == nil { WidgetData.myColor = myColor }
         stream.onAuthLost = { [weak self] in self?.signOut() }
         stream.onOnline = { [weak self] up in self?.connectionChanged(up) }
         stream.onSync = { [weak self] in
