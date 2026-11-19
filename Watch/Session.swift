@@ -9,6 +9,9 @@ struct Session: Equatable {
 
     static func load() -> Session? {
         guard let token = Keychain.read("token") else { return nil }
+        // From before the app group: where the watch's widgets find it.
+        Keychain.share("token")
+        Keychain.share("email")
         return Session(token: token, email: Keychain.read("email"))
     }
 

@@ -3,15 +3,11 @@ import Security
 
 /// Sign-in secrets, kept in the Keychain of this device only: they never
 /// leave it except to the server (and to Firebase, for the iPhone's session).
-/// On the iPhone they are in the app group's part of the Keychain, so the
-/// widgets, the Control Center buttons and Siri can send a heart too.
+/// They are in the app group's part of the Keychain, so the widgets, the
+/// Control Center buttons and Siri can send a heart too.
 enum Keychain {
     private static let service = "me.lovearound.session"
-    #if os(iOS)
     private static let group: String? = "group.me.lovearound.ios"
-    #else
-    private static let group: String? = nil
-    #endif
 
     static func read(_ account: String) -> String? {
         let query: [String: Any] = [

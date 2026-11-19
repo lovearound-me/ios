@@ -2,15 +2,21 @@ import Foundation
 
 /// Sends a heart from outside the app's own screens: a widget's bubble, a
 /// Control Center button, the Action button, Siri. Signs in with what the
-/// app keeps in the shared Keychain: the iPhone's Firebase refresh token
-/// (traded for an ID token here, each time).
+/// app keeps in the shared Keychain: on the iPhone its Firebase refresh
+/// token (traded for an ID token here, each time), on the watch its device
+/// token.
 enum HeartSender {
     enum Failure: LocalizedError {
         case signedOut, network, anyoneThisHour, refused
 
         var errorDescription: String? {
             switch self {
-            case .signedOut: return tr("Войди в Love Around на этом iPhone")
+            case .signedOut:
+                #if os(watchOS)
+                return tr("Войди в Love Around на часах")
+                #else
+                return tr("Войди в Love Around на этом iPhone")
+                #endif
             case .network: return tr("Не улетело, проверь интернет")
             case .anyoneThisHour: return tr("Кому-нибудь на свете уже улетело в этот час.")
             case .refused: return tr("Не получилось. Попробуй ещё раз.")
@@ -57,6 +63,10 @@ enum HeartSender {
     /// `refreshToken`), traded at Firebase for an ID token. A new refresh
     /// token, if Firebase gives one, goes back into the Keychain.
     private static func idToken() async throws -> String {
+        #if os(watchOS)
+        guard let token = Keychain.read("token") else { throw Failure.signedOut }
+        return token
+        #else
         guard let text = Keychain.read(keychainAccount),
               var session = (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [String: Any],
               let refresh = session["refreshToken"] as? String, !refresh.isEmpty else { throw Failure.signedOut }
@@ -88,5 +98,6 @@ enum HeartSender {
             }
         }
         return id
+        #endif
     }
 }

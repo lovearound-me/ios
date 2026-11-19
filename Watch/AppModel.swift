@@ -67,7 +67,11 @@ final class AppModel: ObservableObject {
 
     /// The screen edges glow in it; stays on this watch, like on the iPhone.
     @Published var myColor: Int {
-        didSet { if demo == nil { UserDefaults.standard.set(myColor, forKey: "myColor") } }
+        didSet {
+            guard demo == nil else { return }
+            UserDefaults.standard.set(myColor, forKey: "myColor")
+            WidgetData.myColor = myColor
+        }
     }
     nonisolated static var savedColor: Int { UserDefaults.standard.object(forKey: "myColor") as? Int ?? 0 }
 
@@ -236,7 +240,10 @@ final class AppModel: ObservableObject {
     func signOut(notice: String? = nil) {
         // A demo's «Выйти» only shows the sign-in screen: the watch's real
         // token stays, so a test can't leave a ghost device on the account.
-        if demo == nil { Session.clear() }
+        if demo == nil {
+            Session.clear()
+            WidgetData.clear()
+        }
         session = nil
         contacts = []
         loaded = false
@@ -318,6 +325,7 @@ final class AppModel: ObservableObject {
         signalSeed = Int.random(in: 0..<1000)
         incoming = true
         if tapping { Taps.play(taps) }
+        if demo == nil { WidgetData.heartCame() }
         let seed = signalSeed
         Task {
             try? await Task.sleep(nanoseconds: 5_500_000_000)
@@ -333,6 +341,7 @@ final class AppModel: ObservableObject {
         do {
             contacts = try await API(token: session.token).contacts()
             loaded = true
+            shareWithWidgets()
             sendingOff = false
         } catch let error as APIError where error.sessionGone {
             signOut(notice: tr("Часы отключены в «Устройствах». Войди снова."))
@@ -343,6 +352,13 @@ final class AppModel: ObservableObject {
         } catch {
             // Offline: keep what is on screen and try on the next refresh.
         }
+    }
+
+    /// The complication and the Smart Stack draw people from this copy.
+    private func shareWithWidgets() {
+        let people = circles.map { WidgetData.Person(id: $0.id, label: $0.label, color: $0.color, close: $0.isClose) }
+        if people != WidgetData.people { WidgetData.save(people: people) }
+        if WidgetData.myColor != myColor { WidgetData.myColor = myColor }
     }
 
     func send(_ target: Target) {

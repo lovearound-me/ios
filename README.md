@@ -73,6 +73,12 @@ iPhone's receiving off.
   «Кому-нибудь на свете» first, then the close people, then everyone else.
   A tap sends; a held finger shows the whole name, letting go sends, sliding
   away cancels.
+- **Widgets** (`WatchWidgets/`): on the watch face «О тебе думали», a ♥
+  round or in a corner that glows in my color for an hour after a heart
+  (the watch's own notification extension, `WatchNotify/`, notes the
+  moment in the app group); in the Smart Stack four close people, a tap
+  opens the app; watchOS 26: Control Center and Action button buttons that
+  send with the watch's device token.
 - **«Вибрация»**: taps per heart, 0–5, three by default (on the watch and in
   the iPhone's «Уведомление»). With the app in front it plays them all; on a
   sleeping watch watchOS taps once and the long look plays the rest. None:
