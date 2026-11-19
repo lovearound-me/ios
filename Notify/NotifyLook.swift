@@ -14,6 +14,7 @@ enum NotifyLook: String, CaseIterable, Identifiable {
     static let appGroup = "group.me.lovearound.ios"
     private static let key = "notifyLook"
     private static let wordsKey = "notifyWords"
+    private static let tapsKey = "taps"
 
     static var current: NotifyLook {
         get { UserDefaults(suiteName: appGroup)?.string(forKey: key).flatMap(NotifyLook.init(rawValue:)) ?? .many }
@@ -24,6 +25,14 @@ enum NotifyLook: String, CaseIterable, Identifiable {
     static var withWords: Bool {
         get { UserDefaults(suiteName: appGroup)?.bool(forKey: wordsKey) ?? false }
         set { UserDefaults(suiteName: appGroup)?.set(newValue, forKey: wordsKey) }
+    }
+
+    /// «Вибрация»: taps when a heart comes while the app is open, 0 to 5
+    /// (three unless changed). At 0 the notification comes without a sound,
+    /// so iOS doesn't vibrate either.
+    static var taps: Int {
+        get { UserDefaults(suiteName: appGroup)?.object(forKey: tapsKey) as? Int ?? 3 }
+        set { UserDefaults(suiteName: appGroup)?.set(newValue, forKey: tapsKey) }
     }
 
     static var words: String { tr("Кто-то думает о тебе") }

@@ -55,8 +55,17 @@ iPhone's receiving off.
   watch out; «Выйти» on the watch removes it from there too
   (`DELETE /v1/devices/self`). The watch never holds the account's own
   sign-in.
-- **The main screen** is circles, like the Mac menu: «Кому-нибудь на свете»
-  first, then the close people, then everyone else. A tap sends.
+- **The main screen**, as Settings → «Вид» says: «Соты» (the default,
+  bubbles packed like the watch's own app screen, smaller towards the
+  edges), «Кружочки» (like the Mac menu), «Кружочки с именами», «Список».
+  «Кому-нибудь на свете» first, then the close people, then everyone else.
+  A tap sends; a held finger shows the whole name, letting go sends, sliding
+  away cancels.
+- **«Вибрация»**: taps per heart, 0–5, three by default (on the watch and in
+  the iPhone's «Уведомление»). With the app in front it plays them all; on a
+  sleeping watch watchOS taps once and the long look plays the rest. None:
+  the watch registers with `silent` and the server sends it passive
+  notifications without sound; the iPhone's extension drops the sound.
 - **A heart for me** comes as the watch's own notification
   (`PUT /v1/devices/self/push`), on the watch's terms: its «Получать
   сердечки» (the same switch as «Принимает» in its card on the phone), its
@@ -125,7 +134,8 @@ the watch in by code, sends one heart and signs out.
 `--demo <name>` draws one screen from made-up data, without signing in. On
 the iPhone: `signin notifyIntro home sent anyone empty signal paused book
 contact add toys board pair settings`; on the watch: `signin exists code
-expired computer connected circles sent anyone empty signal notification settings glow delete`.
+expired computer connected hive circles named list peek sent anyone empty signal notification
+settings layout vibration glow delete`.
 Made-up people have Russian names in Russian and English ones elsewhere.
 
 ## Translations

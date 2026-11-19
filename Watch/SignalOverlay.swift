@@ -89,24 +89,32 @@ private struct FloatingEmoji: View {
 final class SignalNotificationController: WKUserNotificationHostingController<SignalNotificationView> {
     /// The hearts the notification came with: the server's wave for this
     /// watch, or the iPhone's text when the phone's notification is shown here.
-    private var wave = ""
+    /// Observed, so the view redraws when `didReceive` fills it in.
+    private let wave = SignalNotificationView.Wave()
 
     override var body: SignalNotificationView {
-        SignalNotificationView(color: Palette.color(AppModel.savedColor), wave: wave)
+        SignalNotificationView(color: Palette.color(AppModel.savedColor), box: wave)
     }
 
     /// watchOS shows the dynamic view only once this has been called on it;
-    /// without it, it waits, then falls back to the static look.
+    /// without it, it waits, then falls back to the static look. watchOS has
+    /// tapped once already; the rest of «Вибрация»'s taps come now.
     override func didReceive(_ notification: UNNotification) {
-        wave = SignalNotificationView.hearts(in: notification.request.content.body)
-        setNeedsBodyUpdate()
+        wave.text = SignalNotificationView.hearts(in: notification.request.content.body)
+        Taps.play(Taps.count - 1, after: 0.35)
     }
 }
 
 struct SignalNotificationView: View {
+    final class Wave: ObservableObject {
+        @Published var text: String
+        init(_ text: String = "") { self.text = text }
+    }
+
     let color: Color
     /// ✨💗💖💞💖💗✨ above the heart; empty for a bare «♥».
-    var wave = ""
+    @ObservedObject var box: Wave
+    private var wave: String { box.text }
 
     @State private var bright = false
 
