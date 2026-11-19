@@ -168,8 +168,14 @@ struct SettingsView: View {
                 Button(tr("Пока не сниму")) { model.pause(.untilResumed) }
             }
         } label: {
-            SettingsRow(symbol: "moon.fill", tint: Theme.indigo, title: tr("Пауза"),
-                        sub: model.isPaused ? model.pauseText : tr("Нет"))
+            HStack {
+                SettingsRow(symbol: "moon.fill", tint: Theme.indigo, title: tr("Пауза"),
+                            sub: model.isPaused ? model.pauseText : tr("Нет"))
+                // A menu, not a page: iOS's sign for one.
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.faint)
+            }
         }
         .disabled(!model.receiveHere)
         .accessibilityIdentifier("pause")
