@@ -17,7 +17,7 @@ final class AppModel: ObservableObject {
     }
 
     /// The bubble for «Кому-нибудь на свете» in `justSent`.
-    static let anyoneID = "anyone"
+    nonisolated static let anyoneID = "anyone"
 
     @Published var screen: Screen
     @Published private(set) var session: Session? = nil
