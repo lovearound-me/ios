@@ -249,5 +249,21 @@
   "тихо {from}–{to}": "quiet {from}–{to}",
   "только что": "just now",
   "увидит твоих людей": "will see your people",
-  "через {n} мин": "in {n} min"
+  "через {n} мин": "in {n} min",
+  "Как это работает": "How it works",
+  "Нажми на человека": "Tap a person",
+  "Он почувствует, что о нём подумали: придёт уведомление, засветится экран или лампа.": "They’ll feel that someone thought of them: a notification comes, a screen or a lamp glows.",
+  "От кого, не видно": "Nobody sees who it’s from",
+  "В сердечке нет ни имени, ни текста. Узнать, от кого оно, нельзя.": "A heart has no name and no text in it. There is no way to find out who sent it.",
+  "Добавь своих по Love ID": "Add your people by Love ID",
+  "Это твоя ссылка. Отправь её близким и открой их ссылки.": "It’s your link. Send it to those close to you, and open theirs.",
+  "Раз в час можно послать сердечко случайному человеку.": "Once an hour you can send a heart to a random person.",
+  "Начать": "Start",
+  "Понятно": "Got it",
+  "С чего начать": "Where to start",
+  "Поделись своим Love ID.": "Share your Love ID.",
+  "Это ссылка, по ней тебя добавят.": "It’s a link: people add you with it.",
+  "Добавь близкого по его ссылке.": "Add someone close by their link.",
+  "Нажми на его кружок.": "Tap their circle.",
+  "Он почувствует, что о нём подумали, а от кого, не узнает.": "They’ll feel that someone thought of them, and won’t know who."
 }

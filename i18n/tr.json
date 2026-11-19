@@ -249,5 +249,21 @@
   "тихо {from}–{to}": "sessiz {from}–{to}",
   "только что": "az önce",
   "увидит твоих людей": "insanlarını görecek",
-  "через {n} мин": "{n} dk sonra"
+  "через {n} мин": "{n} dk sonra",
+  "Как это работает": "Nasıl çalışır",
+  "Нажми на человека": "Birine dokun",
+  "Он почувствует, что о нём подумали: придёт уведомление, засветится экран или лампа.": "Birinin onu düşündüğünü hisseder: bildirim gelir, ekran ya da lamba ışıldar.",
+  "От кого, не видно": "Kimden geldiği görünmez",
+  "В сердечке нет ни имени, ни текста. Узнать, от кого оно, нельзя.": "Kalpte ne isim ne de yazı var. Kimin gönderdiğini öğrenmenin yolu yok.",
+  "Добавь своих по Love ID": "Sevdiklerini Love ID ile ekle",
+  "Это твоя ссылка. Отправь её близким и открой их ссылки.": "Bu senin bağlantın. Sevdiklerine gönder, onlarınkini de aç.",
+  "Раз в час можно послать сердечко случайному человеку.": "Saatte bir, rastgele birine kalp gönderebilirsin.",
+  "Начать": "Başla",
+  "Понятно": "Anladım",
+  "С чего начать": "Nereden başlamalı",
+  "Поделись своим Love ID.": "Love ID’ni paylaş.",
+  "Это ссылка, по ней тебя добавят.": "Bu bir bağlantı: seni onunla eklerler.",
+  "Добавь близкого по его ссылке.": "Sevdiğin birini bağlantısıyla ekle.",
+  "Нажми на его кружок.": "Onun dairesine dokun.",
+  "Он почувствует, что о нём подумали, а от кого, не узнает.": "Birinin onu düşündüğünü hisseder, ama kim olduğunu bilmez."
 }

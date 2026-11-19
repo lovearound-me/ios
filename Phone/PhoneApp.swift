@@ -38,7 +38,13 @@ struct RootView: View {
                     .id(out.id)
                     .transition(.opacity)
             }
-            if model.notifyIntro {
+            // One at a time: what the app is for, then why it asks about
+            // notifications.
+            if model.howItWorks {
+                HowItWorksView(button: tr("Начать")) { model.closeHowItWorks() }
+                    .transition(.opacity)
+                    .zIndex(1)
+            } else if model.notifyIntro {
                 NotifyIntroView()
                     .transition(.opacity)
                     .zIndex(1)
@@ -62,6 +68,7 @@ struct RootView: View {
         })
         .animation(.easeInOut(duration: 0.3), value: model.incoming)
         .animation(.easeInOut(duration: 0.3), value: model.notifyIntro)
+        .animation(.easeInOut(duration: 0.3), value: model.howItWorks)
         .animation(.easeOut(duration: 0.4), value: model.outgoing)
         .onOpenURL { model.handle(url: $0) }
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in

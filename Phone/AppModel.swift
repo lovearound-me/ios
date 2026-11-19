@@ -88,6 +88,14 @@ final class AppModel: ObservableObject {
     /// Before iOS asks about notifications: what they are for, once after
     /// signing in.
     @Published private(set) var notifyIntro = false
+    /// «Как это работает», once after the first sign-in on this iPhone
+    /// (HowItWorksView); Настройки keep it for later.
+    @Published private(set) var howItWorks = false
+    /// «С чего начать» on the home screen: from an empty book until the
+    /// first heart to someone in it.
+    @Published private(set) var starting: Bool { didSet { defaults.set(starting, forKey: "starting") } }
+    /// Its first step: the Love ID was handed to the share sheet.
+    @Published private(set) var sharedLoveID: Bool { didSet { defaults.set(sharedLoveID, forKey: "sharedLoveID") } }
     /// The server has been out of reach for a few seconds: signals don't come.
     @Published private(set) var offline = false
 
@@ -173,6 +181,8 @@ final class AppModel: ObservableObject {
         notifyLook = NotifyLook.current
         notifyWords = NotifyLook.withWords
         lastSent = defaults.dictionary(forKey: "lastSent") as? [String: Date] ?? [:]
+        starting = defaults.bool(forKey: "starting")
+        sharedLoveID = defaults.bool(forKey: "sharedLoveID")
 
         stream.anyone = acceptAnyone
         stream.onSignal = { [weak self] in self?.receive() }
@@ -224,6 +234,7 @@ final class AppModel: ObservableObject {
             let me = try await api.me()
             inviteURL = me.invite_url
             contacts = try await api.contacts()
+            if contacts.isEmpty && !starting { starting = true }
             loaded = true
             keepForNextStart()
             provider = auth.provider
@@ -250,6 +261,7 @@ final class AppModel: ObservableObject {
 
     func send(_ contact: Contact) {
         lastSent[contact.id] = Date()
+        if starting { starting = false }
         sent(contact.id, Palette.color(contact.color), tr("{name} — улетело ♥", ["name": contact.label])) { api in
             try await api.signal(contact.id)
         }
@@ -418,6 +430,25 @@ final class AppModel: ObservableObject {
     func closeNotifyIntro() {
         if demo == nil { defaults.set(true, forKey: "notifyIntroSeen") }
         notifyIntro = false
+    }
+
+    // MARK: The first minutes
+
+    func closeHowItWorks() {
+        if demo == nil { defaults.set(true, forKey: "howItWorksSeen") }
+        howItWorks = false
+    }
+
+    /// «Мой Love ID» of «С чего начать» opened the share sheet. Whether the
+    /// link went anywhere iOS doesn't say, and the step isn't an exam.
+    func openedShare() {
+        if !sharedLoveID { sharedLoveID = true }
+    }
+
+    /// «С чего начать» is on the home screen: nobody in the book yet, or
+    /// somebody is, and no heart has gone to them from here.
+    var showsStart: Bool {
+        loaded && (contacts.isEmpty || starting)
     }
 
     /// Tells the server where and when this iPhone takes notifications, or
@@ -846,6 +877,7 @@ final class AppModel: ObservableObject {
         email = auth.session?.email
         provider = auth.provider
         tab = .hearts
+        if !defaults.bool(forKey: "howItWorksSeen") { howItWorks = true }
         if receiveHere { stream.start() }
         Task { await reload() }
         Task { await refreshPush() }
@@ -896,6 +928,9 @@ final class AppModel: ObservableObject {
         outgoing = nil
         incoming = false
         notifyIntro = false
+        howItWorks = false
+        starting = false
+        sharedLoveID = false
         settingsPath = []
         tab = .hearts
         // Not carried over to whoever signs in here next.
@@ -970,9 +1005,14 @@ final class AppModel: ObservableObject {
         notifyIntro = true
     }
 
+    func demoShowHowItWorks() {
+        howItWorks = true
+    }
+
     func demoSet(signedIn: Bool, contacts: [Contact], devices: [Device] = [], tab: Tab = .hearts,
                  justSent: String? = nil, outgoing: Outgoing? = nil, anyoneSentAt: Date? = nil, pausedUntil: Date? = nil,
-                 receiveHere: Bool = true, quietHours: QuietHours? = nil) {
+                 receiveHere: Bool = true, quietHours: QuietHours? = nil,
+                 starting: Bool = false, sharedLoveID: Bool = false) {
         self.signedIn = signedIn
         email = signedIn ? "anna@example.com" : nil
         provider = signedIn ? "apple.com" : nil
@@ -989,6 +1029,9 @@ final class AppModel: ObservableObject {
         self.receiveHere = receiveHere
         self.pausedUntil = pausedUntil
         self.quietHours = quietHours
+        // As after a real reload: an empty book starts «С чего начать».
+        self.starting = starting || (signedIn && contacts.isEmpty)
+        self.sharedLoveID = sharedLoveID
         lastSent = [:]
     }
 }

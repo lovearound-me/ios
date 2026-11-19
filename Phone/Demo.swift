@@ -8,7 +8,8 @@ struct Demo {
 
     static let names = ["signin", "home", "sent", "anyone", "empty", "signal", "paused", "offHere",
                         "book", "contact", "add", "choose", "toys", "board", "pair", "device", "deviceWho",
-                        "deviceDoes", "deviceBoard", "settings", "settingsAccount", "settingsWho", "notifyLook", "notifyIntro"]
+                        "deviceDoes", "deviceBoard", "settings", "settingsAccount", "settingsWho", "notifyLook", "notifyIntro",
+                        "how", "start"]
 
     /// A made-up name: the Russian one in Russian, the English one elsewhere.
     static func said(_ russian: String, _ english: String) -> String {
@@ -82,6 +83,12 @@ struct Demo {
             }
         case "empty":
             model.demoSet(signedIn: true, contacts: [])
+        case "start":
+            // The first person is in, the Love ID went out: one step left.
+            model.demoSet(signedIn: true, contacts: [people[1]], starting: true, sharedLoveID: true)
+        case "how":
+            model.demoSet(signedIn: true, contacts: people)
+            model.demoShowHowItWorks()
         case "paused":
             model.demoSet(signedIn: true, contacts: people, pausedUntil: .distantFuture)
         case "offHere":

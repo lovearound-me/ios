@@ -321,6 +321,67 @@ final class PhoneDemoUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Аня"].isHittable)
     }
 
+    /// «Как это работает» comes over the app after the first sign-in, and
+    /// «Начать» leaves the circles.
+    func testHowItWorksCloses() {
+        let app = XCUIApplication.russian(demo: "how")
+        let start = app.element("howClose")
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertEqual(start.label, "Начать")
+        XCTAssertTrue(app.staticTexts["Как это работает"].exists)
+        start.tap()
+        XCTAssertTrue(start.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Аня"].isHittable)
+    }
+
+    /// The same page stays in Настройки for later.
+    func testHowItWorksFromSettings() {
+        let app = XCUIApplication.russian(demo: "settings")
+        let row = app.element("settingsHow")
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.tap()
+        let close = app.element("howClose")
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        XCTAssertEqual(close.label, "Понятно")
+        close.tap()
+        XCTAssertTrue(close.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(row.isHittable)
+    }
+
+    /// «С чего начать» with nobody in the book: both ways in are there, and
+    /// the card stays, one step done, once somebody is added.
+    func testStartCardLeadsToTheFirstPerson() {
+        let app = XCUIApplication.russian(demo: "empty")
+        let add = app.element("startAdd")
+        XCTAssertTrue(add.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("startShare").exists)
+        XCTAssertNotEqual(app.element("startStep2").value as? String, "Готово")
+        add.tap()
+        let link = app.element("inviteLink")
+        XCTAssertTrue(link.waitForExistence(timeout: 5))
+        link.tap()
+        link.typeText("https://lovearound.me/i/HQ7MX-4RT2P")
+        app.element("newName").tap()
+        app.element("newName").typeText("Катя")
+        app.element("addContact").tap()
+        XCTAssertTrue(app.buttons["Катя"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.element("startStep2").value as? String, "Готово")
+        XCTAssertFalse(add.exists)
+    }
+
+    /// The first heart to someone in the book is the last step: the card
+    /// goes.
+    func testStartCardGoesAfterTheFirstHeart() {
+        let app = XCUIApplication.russian(demo: "start")
+        let step = app.element("startStep3")
+        XCTAssertTrue(step.waitForExistence(timeout: 10))
+        XCTAssertEqual(app.element("startStep1").value as? String, "Готово")
+        XCTAssertFalse(app.element("startShare").exists)
+        app.buttons["Аня"].tap()
+        XCTAssertTrue(app.element("sentGlow").waitForExistence(timeout: 3))
+        XCTAssertTrue(step.waitForNonExistence(timeout: 5))
+    }
+
     /// Nothing promises what isn't there yet, and the pages about privacy
     /// and help are a tap away.
     func testNoComingSoonAndPagesAreLinked() {

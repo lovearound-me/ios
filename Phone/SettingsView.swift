@@ -13,6 +13,7 @@ enum SettingsPage: Hashable {
 struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @ObservedObject private var push = Push.shared
+    @State private var showingHow = false
 
     var body: some View {
         NavigationStack(path: $model.settingsPath) {
@@ -44,6 +45,17 @@ struct SettingsView: View {
                 }
                 .listRowBackground(Theme.field)
                 Section {
+                    Button { showingHow = true } label: {
+                        HStack {
+                            Text(tr("Как это работает"))
+                                .foregroundStyle(Theme.ink)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.app(13, weight: .semibold))
+                                .foregroundStyle(Theme.faint)
+                        }
+                    }
+                    .accessibilityIdentifier("settingsHow")
                     Link(destination: Config.supportPage) { pageRow(tr("Помощь")) }
                         .accessibilityIdentifier("settingsHelp")
                     Link(destination: Config.privacyPage) { pageRow(tr("Конфиденциальность")) }
@@ -64,6 +76,9 @@ struct SettingsView: View {
                 case .look: NotifyLookView()
                 case .does: PhoneDoesView()
                 }
+            }
+            .sheet(isPresented: $showingHow) {
+                HowItWorksView(button: tr("Понятно")) { showingHow = false }
             }
         }
     }

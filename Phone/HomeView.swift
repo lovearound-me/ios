@@ -12,9 +12,11 @@ struct HomeView: View {
                 header
                 banners
                 circles
-                if model.contacts.isEmpty {
-                    if model.loaded { EmptyBook() }
-                } else {
+                if model.showsStart {
+                    StartCard()
+                        .transition(.opacity)
+                }
+                if !model.contacts.isEmpty {
                     Button { model.tab = .book } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "book.closed")
@@ -40,6 +42,7 @@ struct HomeView: View {
             .padding(.bottom, 32)
             .frame(maxWidth: 560)
             .frame(maxWidth: .infinity)
+            .animation(.easeInOut(duration: 0.3), value: model.showsStart)
         }
         .background(Theme.paper.ignoresSafeArea())
         .refreshable { await model.reload() }

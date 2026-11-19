@@ -249,5 +249,21 @@
   "тихо {from}–{to}": "silenzio {from}–{to}",
   "только что": "proprio ora",
   "увидит твоих людей": "vedrà le tue persone",
-  "через {n} мин": "tra {n} min"
+  "через {n} мин": "tra {n} min",
+  "Как это работает": "Come funziona",
+  "Нажми на человека": "Tocca una persona",
+  "Он почувствует, что о нём подумали: придёт уведомление, засветится экран или лампа.": "Sentirà che qualcuno ha pensato a lei: arriva una notifica, si illumina lo schermo o una lampada.",
+  "От кого, не видно": "Non si vede da chi arriva",
+  "В сердечке нет ни имени, ни текста. Узнать, от кого оно, нельзя.": "Nel cuore non c’è né nome né testo. Non c’è modo di sapere chi l’ha inviato.",
+  "Добавь своих по Love ID": "Aggiungi i tuoi con il Love ID",
+  "Это твоя ссылка. Отправь её близким и открой их ссылки.": "È il tuo link. Mandalo alle persone care e apri i loro.",
+  "Раз в час можно послать сердечко случайному человеку.": "Una volta all’ora puoi inviare un cuore a una persona a caso.",
+  "Начать": "Inizia",
+  "Понятно": "Ho capito",
+  "С чего начать": "Da dove iniziare",
+  "Поделись своим Love ID.": "Condividi il tuo Love ID.",
+  "Это ссылка, по ней тебя добавят.": "È un link: con quello ti aggiungono.",
+  "Добавь близкого по его ссылке.": "Aggiungi una persona cara con il suo link.",
+  "Нажми на его кружок.": "Tocca il suo cerchio.",
+  "Он почувствует, что о нём подумали, а от кого, не узнает.": "Sentirà che qualcuno ha pensato a lei, e non saprà chi."
 }
