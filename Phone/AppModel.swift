@@ -27,10 +27,21 @@ final class AppModel: ObservableObject {
         var code: String
     }
 
-    /// A line over the tab bar for a moment: «Аня — улетело ♥», or what failed.
+    /// A line over the tab bar for a moment: what failed, or «Скопировано».
     struct Toast: Equatable {
         let text: String
         var failed = false
+    }
+
+    /// A signal just went: the app's edges glow in the person's color and
+    /// emoji float up, as on the Mac. Stars for «Кому-нибудь на свете».
+    struct Outgoing: Equatable {
+        let id = UUID()
+        let color: Color
+        let stars: Bool
+        let seed: Int
+        /// For VoiceOver and the tests: «Аня — улетело ♥».
+        let text: String
     }
 
     /// The circle for «Кому-нибудь на свете» in `justSent`.
@@ -58,7 +69,12 @@ final class AppModel: ObservableObject {
     @Published var tab: Tab = .hearts
     @Published var adding: Adding?
     @Published var pairing: Pairing?
+    /// «＋» among the circles: who of the book goes into «Рядом».
+    @Published var choosingClose = false
+    /// «Новый человек по ссылке» in that sheet: the add sheet comes once it closes.
+    var addByLinkNext = false
     @Published private(set) var toast: Toast?
+    @Published private(set) var outgoing: Outgoing?
     /// The circle that just sent, filled for a moment.
     @Published private(set) var justSent: String?
     /// Why the sign-in failed, under its buttons.
@@ -75,6 +91,21 @@ final class AppModel: ObservableObject {
 
     /// The screen edges glow in it when a signal comes; stays on this phone.
     @Published var myColor: Int { didSet { defaults.set(myColor, forKey: "myColor") } }
+    /// Off: this iPhone keeps no stream open, so nothing glows here; the
+    /// account's other devices get signals as before. Stays on this phone.
+    @Published var receiveHere: Bool {
+        didSet {
+            defaults.set(receiveHere, forKey: "receiveHere")
+            guard demo == nil, signedIn else { return }
+            if receiveHere {
+                stream.start()
+            } else {
+                stream.stop()
+                goingOffline?.cancel()
+                offline = false
+            }
+        }
+    }
     /// Take signals from «Кому-нибудь на свете» too: the server asks the stream.
     @Published var acceptAnyone: Bool {
         didSet {
@@ -93,6 +124,7 @@ final class AppModel: ObservableObject {
     private var pendingAdd: String?
     private var pendingPair: String?
     private var toastGeneration = 0
+    private var outgoingGeneration = 0
     private var goingOffline: Task<Void, Never>?
     private var saving: Task<Void, Never>?
     private var reorderSave: Task<Void, Never>?
@@ -102,6 +134,7 @@ final class AppModel: ObservableObject {
         stream = Stream(auth: auth)
         demo = Demo.fromArguments()
         myColor = defaults.object(forKey: "myColor") as? Int ?? 1
+        receiveHere = defaults.object(forKey: "receiveHere") as? Bool ?? true
         acceptAnyone = defaults.object(forKey: "acceptAnyone") as? Bool ?? true
         anyoneSentAt = defaults.object(forKey: "anyoneSentAt") as? Date
         pausedUntil = defaults.object(forKey: "pausedUntil") as? Date
@@ -133,7 +166,7 @@ final class AppModel: ObservableObject {
     func becameActive() {
         guard demo == nil, signedIn else { return }
         if let until = pausedUntil, until <= Date() { pausedUntil = nil }
-        stream.start()
+        if receiveHere { stream.start() }
         Task { await reload() }
     }
 
@@ -175,7 +208,7 @@ final class AppModel: ObservableObject {
 
     func send(_ contact: Contact) {
         lastSent[contact.id] = Date()
-        sent(contact.id, tr("{name} — улетело ♥", ["name": contact.label])) { api in
+        sent(contact.id, Palette.color(contact.color), tr("{name} — улетело ♥", ["name": contact.label])) { api in
             try await api.signal(contact.id)
         }
     }
@@ -186,15 +219,15 @@ final class AppModel: ObservableObject {
     func sendToAnyone() {
         guard anyoneWait() == nil else { return }
         anyoneSentAt = Date()
-        sent(Self.anyoneID, tr("Кому-нибудь на свете — улетело ✨")) { api in
+        sent(Self.anyoneID, Theme.star, tr("Кому-нибудь на свете — улетело ✨")) { api in
             try await api.signalAnyone()
         }
     }
 
-    private func sent(_ id: String, _ text: String, _ call: @escaping (API) async throws -> Void) {
+    private func sent(_ id: String, _ color: Color, _ text: String, _ call: @escaping (API) async throws -> Void) {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         justSent = id
-        show(text)
+        glow(Outgoing(color: color, stars: id == Self.anyoneID, seed: Int.random(in: 0..<1000), text: text))
         guard demo == nil else { return }
         Task {
             do {
@@ -223,6 +256,20 @@ final class AppModel: ObservableObject {
         return left > 0 ? Int((left / 60).rounded(.up)) : nil
     }
 
+    /// The glow and the emoji for a signal that went; a new one starts over.
+    func glow(_ out: Outgoing) {
+        outgoingGeneration += 1
+        let generation = outgoingGeneration
+        outgoing = out
+        UIAccessibility.post(notification: .announcement, argument: out.text)
+        Task {
+            try? await Task.sleep(nanoseconds: SendGlow.seconds)
+            guard generation == outgoingGeneration else { return }
+            outgoing = nil
+            justSent = nil
+        }
+    }
+
     func show(_ text: String, failed: Bool = false) {
         toastGeneration += 1
         let generation = toastGeneration
@@ -231,7 +278,6 @@ final class AppModel: ObservableObject {
             try? await Task.sleep(nanoseconds: failed ? 4_000_000_000 : 2_500_000_000)
             guard generation == toastGeneration else { return }
             toast = nil
-            justSent = nil
         }
     }
 
@@ -377,6 +423,23 @@ final class AppModel: ObservableObject {
                 await reload()
             }
         }
+    }
+
+    /// «＋» among the circles. With nobody in the book there is nobody to
+    /// pick: the add sheet at once.
+    func addToClose() {
+        if contacts.isEmpty {
+            adding = Adding(invite: "")
+        } else {
+            choosingClose = true
+        }
+    }
+
+    /// The «Рядом» picker closed: «Новый человек по ссылке» opens the add sheet.
+    func closePickerClosed() {
+        guard addByLinkNext else { return }
+        addByLinkNext = false
+        adding = Adding(invite: "")
     }
 
     /// A drag among the circles in the book.
@@ -650,7 +713,7 @@ final class AppModel: ObservableObject {
         email = auth.session?.email
         provider = auth.provider
         tab = .hearts
-        stream.start()
+        if receiveHere { stream.start() }
         Task { await reload() }
         if let invite = pendingAdd {
             pendingAdd = nil
@@ -676,6 +739,8 @@ final class AppModel: ObservableObject {
         devicesLoaded = false
         toysPath = []
         adding = nil
+        choosingClose = false
+        outgoing = nil
         tab = .hearts
     }
 
@@ -697,7 +762,8 @@ final class AppModel: ObservableObject {
     // MARK: Demo
 
     func demoSet(signedIn: Bool, contacts: [Contact], devices: [Device] = [], tab: Tab = .hearts,
-                 justSent: String? = nil, toast: String? = nil, anyoneSentAt: Date? = nil, pausedUntil: Date? = nil) {
+                 justSent: String? = nil, outgoing: Outgoing? = nil, anyoneSentAt: Date? = nil, pausedUntil: Date? = nil,
+                 receiveHere: Bool = true) {
         self.signedIn = signedIn
         email = signedIn ? "anna@example.com" : nil
         provider = signedIn ? "apple.com" : nil
@@ -708,8 +774,10 @@ final class AppModel: ObservableObject {
         devicesLoaded = signedIn
         self.tab = tab
         self.justSent = justSent
-        self.toast = toast.map { Toast(text: $0) }
+        self.outgoing = outgoing
+        toast = nil
         self.anyoneSentAt = anyoneSentAt
+        self.receiveHere = receiveHere
         self.pausedUntil = pausedUntil
         lastSent = [:]
     }

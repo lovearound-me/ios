@@ -14,7 +14,7 @@ case "$app" in
     *iphonesimulator*)
         bundle=me.lovearound.ios
         os=iOS
-        screens="signin home sent anyone empty signal paused book contact add toys board pair device deviceWho deviceDoes deviceBoard settings"
+        screens="signin home sent anyone empty signal paused offHere book contact add choose toys board pair device deviceWho deviceDoes deviceBoard settings"
         ;;
     *)
         bundle=me.lovearound.ios.watchkitapp
@@ -62,7 +62,8 @@ for lang in ru en; do
     for screen in $screens; do
         xcrun simctl launch --terminate-running-process "$udid" "$bundle" \
             --demo "$screen" -AppleLanguages "($lang)" -AppleLocale "$lang" >/dev/null
-        # The signal shows for 5.5 s with emoji rising: catch it mid-way.
+        # The signal shows for 5.5 s with emoji rising, a sent heart's glow
+        # starts 1.6 s in (Phone/Demo.swift): catch both mid-way.
         if [ "$screen" = signal ]; then sleep 2; else sleep 3; fi
         xcrun simctl io "$udid" screenshot "$out/$lang/$screen.png" >/dev/null
         echo "$lang/$screen.png"

@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// My color, hearts from anyone, pause, my Love ID, the account.
+/// Receiving here, my color, hearts from anyone, pause, my Love ID, the account.
 struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @State private var confirmSignOut = false
@@ -13,6 +13,14 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
+                    Toggle(tr("Получать сердечки на этом iPhone"), isOn: $model.receiveHere)
+                        .accessibilityIdentifier("receiveHere")
+                } footer: {
+                    Text(tr("Выключишь, и этот iPhone не будет светиться. Mac, часы и игрушки получают как раньше."))
+                }
+                .listRowBackground(Theme.field)
+
+                Section {
                     ColorSwatches(selection: $model.myColor)
                 } header: {
                     Text(tr("Мой цвет сигнала"))
@@ -23,6 +31,7 @@ struct SettingsView: View {
 
                 Section {
                     Toggle(tr("Сердечки от кого-нибудь на свете"), isOn: $model.acceptAnyone)
+                        .disabled(!model.receiveHere)
                         .accessibilityIdentifier("acceptAnyone")
                 } footer: {
                     Text(tr("Кто-то где-то нажал «Кому-нибудь на свете», и сердечко может прилететь тебе. Бывает редко, тем и приятнее."))
@@ -50,6 +59,7 @@ struct SettingsView: View {
                             }
                         }
                         .accessibilityIdentifier("pause")
+                        .disabled(!model.receiveHere)
                     }
                 } footer: {
                     Text(tr("Пока сердечки приходят, только когда приложение открыто. Уведомления будут в следующей версии."))
