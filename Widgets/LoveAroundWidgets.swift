@@ -64,7 +64,7 @@ struct Bubble: View {
     var named = true
 
     var body: some View {
-        Button(intent: SendHeartIntent(person: PersonEntity(person))) {
+        Button(intent: SendHeartIntent(contactID: person.id, name: person.label)) {
             VStack(spacing: 4) {
                 ZStack {
                     Circle().fill(Palette.color(person.color).gradient)
@@ -408,7 +408,8 @@ struct PickPersonControlIntent: ControlConfigurationIntent {
 struct PersonControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         AppIntentControlConfiguration(kind: "person-control", intent: PickPersonControlIntent.self) { configuration in
-            ControlWidgetButton(action: SendHeartIntent(person: configuration.person ?? PersonEntity(id: "", name: ""))) {
+            ControlWidgetButton(action: SendHeartIntent(contactID: configuration.person?.id ?? "",
+                                                        name: configuration.person?.name ?? "")) {
                 Label(configuration.person?.name ?? tr("Отправить сердечко"), systemImage: "heart.fill")
             }
         }

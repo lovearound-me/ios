@@ -39,26 +39,34 @@ struct PersonQuery: EntityStringQuery {
     }
 }
 
-/// A heart to one person, from a widget's bubble, a button or Siri. The
-/// app doesn't open.
+/// A heart to one person, from a widget's bubble or a button. The app
+/// doesn't open. Plain strings, not a PersonEntity: a widget's button
+/// couldn't hand an entity to the extension ("PersonEntity is not a
+/// registered AppEntity identifier", and nothing was sent). Siri has its
+/// own intent with the entity (Phone/Shortcuts.swift).
 struct SendHeartIntent: AppIntent {
     static var title: LocalizedStringResource = "Send a heart"
     static var description = IntentDescription("Someone in your book learns that someone is thinking of them. Never who.")
     static var openAppWhenRun = false
+    static var isDiscoverable = false
 
     @Parameter(title: "Person")
-    var person: PersonEntity
+    var contactID: String
+
+    @Parameter(title: "Name")
+    var name: String
 
     init() {}
 
-    init(person: PersonEntity) {
-        self.person = person
+    init(contactID: String, name: String) {
+        self.contactID = contactID
+        self.name = name
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        try await HeartSender.send(to: person.id)
-        WidgetData.sent(person.id)
-        return .result(dialog: IntentDialog(stringLiteral: tr("{name} — улетело ♥", ["name": person.name])))
+        try await HeartSender.send(to: contactID)
+        WidgetData.sent(contactID)
+        return .result(dialog: IntentDialog(stringLiteral: tr("{name} — улетело ♥", ["name": name])))
     }
 }
 

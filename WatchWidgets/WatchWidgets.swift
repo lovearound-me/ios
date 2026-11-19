@@ -194,7 +194,8 @@ struct PickPersonControlIntent: ControlConfigurationIntent {
 struct WatchPersonControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         AppIntentControlConfiguration(kind: "person-control", intent: PickPersonControlIntent.self) { configuration in
-            ControlWidgetButton(action: SendHeartIntent(person: configuration.person ?? PersonEntity(id: "", name: ""))) {
+            ControlWidgetButton(action: SendHeartIntent(contactID: configuration.person?.id ?? "",
+                                                        name: configuration.person?.name ?? "")) {
                 Label(configuration.person?.name ?? tr("Отправить сердечко"), systemImage: "heart.fill")
             }
         }
