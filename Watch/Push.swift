@@ -49,7 +49,7 @@ final class WatchPush: NSObject, UNUserNotificationCenterDelegate {
     }
 
     var allowed: Bool {
-        [.authorized, .provisional, .ephemeral].contains(status)
+        [.authorized, .provisional].contains(status)
     }
 
     /// Asks watchOS once (it asks the person only the first time), then
@@ -78,20 +78,31 @@ final class WatchPush: NSObject, UNUserNotificationCenterDelegate {
         onToken?(hex)
     }
 
+    // The completion-handler forms, each handler called on the main thread:
+    // with the async forms Swift calls it from a background thread, and
+    // iOS takes the app's snapshot there when a tapped notification opens
+    // it, which aborts the app (UIKit asserts the main thread).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        await MainActor.run { self.onHeart?() }
-        return []
+                                            willPresent notification: UNNotification,
+                                            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated { self.onHeart?() }
+            completionHandler([])
+        }
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            didReceive response: UNNotificationResponse) async {
-        await MainActor.run {
-            if let onTap = self.onTap {
-                onTap()
-            } else {
-                self.tappedEarly = true
+                                            didReceive response: UNNotificationResponse,
+                                            withCompletionHandler completionHandler: @escaping () -> Void) {
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                if let onTap = self.onTap {
+                    onTap()
+                } else {
+                    self.tappedEarly = true
+                }
             }
+            completionHandler()
         }
     }
 }
