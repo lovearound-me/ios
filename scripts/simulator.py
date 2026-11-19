@@ -24,13 +24,17 @@ runtimes = sorted((r for r in simctl("runtimes")["runtimes"]
                    if r.get("platform") == platform and r.get("isAvailable", True)),
                   key=version, reverse=True)
 devices = simctl("devices", "available")["devices"]
-for runtime in runtimes:
-    found = devices.get(runtime["identifier"], [])
+# A version can come as several runtimes (one held only an "iPhone Duo"),
+# so pick among all devices of the newest version that has any.
+for v in sorted({version(r) for r in runtimes}, reverse=True):
+    found = [(d, r) for r in runtimes if version(r) == v
+             for d in devices.get(r["identifier"], [])]
     if platform == "iOS":
-        found = [d for d in found if d["name"].startswith("iPhone")]
-        found.sort(key=lambda d: not ("Pro" in d["name"] and "Max" not in d["name"]))
+        found = [(d, r) for d, r in found if d["name"].startswith("iPhone")]
+        found.sort(key=lambda dr: not ("Pro" in dr[0]["name"] and "Max" not in dr[0]["name"]))
     if found:
-        print(f"{found[0]['name']} on {platform} {runtime['version']}", file=sys.stderr)
-        print(found[0]["udid"])
+        d, r = found[0]
+        print(f"{d['name']} on {platform} {r['version']}", file=sys.stderr)
+        print(d["udid"])
         sys.exit()
 sys.exit(f"no {platform} simulator")
