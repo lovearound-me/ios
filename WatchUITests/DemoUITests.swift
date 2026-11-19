@@ -29,8 +29,11 @@ final class DemoUITests: XCTestCase {
         let code = app.element("pairingCode")
         XCTAssertTrue(code.waitForExistence(timeout: 15))
         XCTAssertEqual(code.label, "482 913")
+        // The button peeks out under the QR code: bring it up whole first, or
+        // the tap lands on the screen's edge (it did on watchOS 26).
+        app.swipeUp()
         app.buttons["Ввести на компьютере"].tap()
-        XCTAssertTrue(app.staticTexts["и введи код"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["и введи код"].waitForExistence(timeout: 10))
     }
 
     func testMyColor() {
