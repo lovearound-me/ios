@@ -102,7 +102,16 @@ final class SignalNotificationController: WKUserNotificationHostingController<Si
     override func didReceive(_ notification: UNNotification) {
         wave.text = SignalNotificationView.hearts(in: notification.request.content.body)
         Taps.play(Taps.count - 1, after: 0.35)
+        // There's nothing to read or answer: the heart goes away by itself,
+        // like the app's own, instead of waiting for «Закрыть» under it.
+        let taps = 0.35 + Double(max(Taps.count - 1, 0)) * TapCount.gap
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(Self.shownFor, taps + 1.5)) { [weak self] in
+            self?.performDismissAction()
+        }
     }
+
+    /// How long the long look stays, the app's own heart's time.
+    static let shownFor: Double = 5.5
 }
 
 struct SignalNotificationView: View {
