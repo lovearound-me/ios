@@ -16,6 +16,29 @@ final class DemoUITests: XCTestCase {
         XCTAssertEqual(caption.label, "Аня — улетело ♥")
     }
 
+    func testEveryLayoutSendsOnATap() {
+        for layout in ["hive", "named", "list"] {
+            let app = XCUIApplication.russian(demo: layout)
+            XCTAssertTrue(app.element("mainHeading").waitForExistence(timeout: 15), layout)
+            app.buttons["Аня"].firstMatch.tap()
+            let caption = app.element("caption")
+            XCTAssertTrue(caption.waitForExistence(timeout: 3), layout)
+            XCTAssertEqual(caption.label, "Аня — улетело ♥", layout)
+            app.terminate()
+        }
+    }
+
+    func testHeldNameShowsWholeName() {
+        let app = XCUIApplication.russian(demo: "peek")
+        let peek = app.element("peek")
+        XCTAssertTrue(peek.waitForExistence(timeout: 15))
+        XCTAssertTrue(peek.label.contains("Аня"), peek.label)
+        peek.tap()
+        let caption = app.element("caption")
+        XCTAssertTrue(caption.waitForExistence(timeout: 3))
+        XCTAssertEqual(caption.label, "Аня — улетело ♥")
+    }
+
     func testStarSendsToSomeoneOutThere() {
         let app = XCUIApplication.russian(demo: "circles")
         app.buttons["Кому-нибудь на свете"].tap()

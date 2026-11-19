@@ -101,7 +101,12 @@ final class AppModel: ObservableObject {
     @Published private(set) var signalSeed = 0
 
     /// The screen edges glow in it when a signal comes; stays on this phone.
-    @Published var myColor: Int { didSet { defaults.set(myColor, forKey: "myColor") } }
+    @Published var myColor: Int {
+        didSet {
+            defaults.set(myColor, forKey: "myColor")
+            if demo == nil { WidgetData.myColor = myColor }
+        }
+    }
     /// Off: this iPhone keeps no stream open, so nothing glows here; the
     /// account's other devices get signals as before. Stays on this phone.
     @Published var receiveHere: Bool {
@@ -147,6 +152,9 @@ final class AppModel: ObservableObject {
     @Published var notifyLook: NotifyLook { didSet { if demo == nil { NotifyLook.current = notifyLook } } }
     /// «Со словами»: «Кто-то думает о тебе» after the emoji.
     @Published var notifyWords: Bool { didSet { if demo == nil { NotifyLook.withWords = notifyWords } } }
+    /// «Вибрация»: taps per heart while the app is open; none also silences
+    /// the notification (the notification extension reads it).
+    @Published var taps: Int { didSet { if demo == nil { NotifyLook.taps = taps } } }
     /// When each contact last got a signal from here: the book puts them first.
     private var lastSent: [String: Date] { didSet { defaults.set(lastSent, forKey: "lastSent") } }
 
@@ -185,12 +193,15 @@ final class AppModel: ObservableObject {
         quietHours = (defaults.data(forKey: "quietHours")).flatMap { try? JSONDecoder().decode(QuietHours.self, from: $0) }
         notifyLook = NotifyLook.current
         notifyWords = NotifyLook.withWords
+        taps = NotifyLook.taps
         lastSent = defaults.dictionary(forKey: "lastSent") as? [String: Date] ?? [:]
         starting = defaults.bool(forKey: "starting")
         sharedLoveID = defaults.bool(forKey: "sharedLoveID")
 
         stream.anyone = acceptAnyone
         stream.onSignal = { [weak self] in self?.receive() }
+        // For the widgets, from before they were there.
+        if demo == nil { WidgetData.myColor = myColor }
         stream.onAuthLost = { [weak self] in self?.signOut() }
         stream.onOnline = { [weak self] up in self?.connectionChanged(up) }
         stream.onSync = { [weak self] in
@@ -360,15 +371,30 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// The glowing edges, the hearts, a tap in the hand.
+    /// The glowing edges, the hearts, taps in the hand («Вибрация»).
     func showSignal() {
         signalSeed = Int.random(in: 0..<1000)
         incoming = true
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        // The widgets' ♥ glows for an hour; tapped notifications come here
+        // too, after the extension already said so: it just starts again.
+        if demo == nil { WidgetData.heartCame() }
+        Self.playTaps(taps)
         let seed = signalSeed
         Task {
             try? await Task.sleep(nanoseconds: 5_500_000_000)
             if signalSeed == seed { incoming = false }
+        }
+    }
+
+    /// `count` firm taps a heartbeat apart.
+    static func playTaps(_ count: Int) {
+        guard count > 0 else { return }
+        let generator = UIImpactFeedbackGenerator(style: .heavy)
+        generator.prepare()
+        for i in 0..<count {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * TapCount.gap) {
+                generator.impactOccurred()
+            }
         }
     }
 
@@ -787,6 +813,12 @@ final class AppModel: ObservableObject {
 
     private func openAdding(_ invite: String) {
         guard signedIn else { pendingAdd = invite; return }
+        // One's own Love ID, opened from a chat it was sent to: there is no
+        // one to add, say what it is instead.
+        if isOwn(invite) {
+            show(tr("Это твоя ссылка: по ней тебя добавляют другие."))
+            return
+        }
         tab = .book
         pairing = nil
         adding = Adding(invite: invite)
@@ -929,6 +961,7 @@ final class AppModel: ObservableObject {
             push.forget()
             try? FileManager.default.removeItem(at: Self.cacheURL)
             auth.signOut()
+            WidgetData.clear()
         }
         goingOffline?.cancel()
         offline = false
@@ -1011,11 +1044,24 @@ final class AppModel: ObservableObject {
         let last = LastSeen(invite: inviteURL, contacts: contacts, devices: devicesLoaded ? devices : nil)
         cacheSave = Task {
             try? await Task.sleep(nanoseconds: 500_000_000)
-            guard !Task.isCancelled, let data = try? JSONEncoder().encode(last) else { return }
+            guard !Task.isCancelled else { return }
+            Self.shareWithWidgets(last.contacts)
+            guard let data = try? JSONEncoder().encode(last) else { return }
             let url = Self.cacheURL
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         }
+    }
+
+    /// The widgets, Control Center buttons and Siri draw and name people
+    /// from this copy: close first, each group in the owner's order.
+    private static func shareWithWidgets(_ contacts: [Contact]) {
+        let people = contacts
+            .sorted { $0.isClose != $1.isClose ? $0.isClose : $0.position < $1.position }
+            .map { WidgetData.Person(id: $0.id, label: $0.label, color: $0.color, close: $0.isClose) }
+        guard people != WidgetData.people else { return }
+        WidgetData.save(people: people)
+        LoveAroundShortcuts.updateAppShortcutParameters()
     }
 
     // MARK: Demo

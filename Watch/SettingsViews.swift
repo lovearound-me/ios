@@ -30,6 +30,18 @@ struct SettingsView: View {
                 }
             }
             .accessibilityIdentifier("glow")
+            NavigationLink {
+                LayoutView()
+            } label: {
+                SettingLine(title: tr("Вид"), value: model.layout.name)
+            }
+            .accessibilityIdentifier("layout")
+            NavigationLink {
+                VibrationView()
+            } label: {
+                SettingLine(title: tr("Вибрация"), value: TapCount.words(model.taps))
+            }
+            .accessibilityIdentifier("vibration")
             if let email = model.session?.email {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(tr("Аккаунт"))
@@ -62,6 +74,89 @@ struct SettingsView: View {
         if let problem = model.receiveProblem { return problem }
         if on && model.notificationsOff { return tr("Уведомления выключены. Включи их в приложении Watch на iPhone.") }
         return tr("Часы получают сердечки сами, даже если iPhone их не принимает.")
+    }
+}
+
+/// A setting's name with its value under it.
+private struct SettingLine: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title)
+            Text(value)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+    }
+}
+
+/// «Вид»: bubbles, circles, circles with names or a list.
+struct LayoutView: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(WatchLayout.allCases) { layout in
+                    Button {
+                        model.layout = layout
+                    } label: {
+                        HStack {
+                            Text(layout.name)
+                            Spacer(minLength: 4)
+                            if model.layout == layout {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(Palette.link)
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("layout-\(layout.rawValue)")
+                    .accessibilityAddTraits(model.layout == layout ? .isSelected : [])
+                }
+            } footer: {
+                Text(tr("Подержи палец на человеке, и покажется имя."))
+            }
+        }
+        .navigationTitle(tr("Вид"))
+    }
+}
+
+/// «Вибрация»: how many taps a heart plays, none to five.
+struct VibrationView: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                Text(TapCount.words(model.taps))
+                    .font(.system(size: 17, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .accessibilityIdentifier("tapsWords")
+                Slider(value: Binding(get: { Double(model.taps) },
+                                      set: { model.taps = Int($0.rounded()) }),
+                       in: Double(TapCount.range.lowerBound)...Double(TapCount.range.upperBound),
+                       step: 1)
+                    .accessibilityLabel(tr("Вибрация"))
+                    .accessibilityIdentifier("taps")
+                Button(tr("Попробовать")) { Taps.play(model.taps) }
+                    .disabled(model.taps == 0)
+                    .accessibilityIdentifier("tapsTry")
+                Text(model.taps == 0
+                     ? tr("Сердечко придёт тихо: без тапа и без звука. Его будет видно в уведомлениях.")
+                     : tr("Столько раз часы стукнут, когда придёт сердечко. Если часы спят, первый стук делает сам watchOS, остальные приходят, когда покажется уведомление."))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Palette.muted)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .navigationTitle(tr("Вибрация"))
     }
 }
 

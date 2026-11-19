@@ -55,7 +55,9 @@ def source_keys(path, ext):
 
 def used():
     keys = {}
-    dirs = [("Shared", ".swift"), ("Watch", ".swift"), ("Phone", ".swift"), ("Notify", ".swift")]
+    dirs = [("Shared", ".swift"), ("Watch", ".swift"), ("Phone", ".swift"), ("Notify", ".swift"),
+            ("Widgets", ".swift"), ("WidgetShared", ".swift"),
+            ("WatchWidgets", ".swift"), ("WatchNotify", ".swift")]
     for folder, ext in dirs:
         for base, _, files in os.walk(os.path.join(ROOT, folder)):
             for name in sorted(files):

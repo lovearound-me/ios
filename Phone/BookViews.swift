@@ -312,6 +312,8 @@ struct AddContactView: View {
             }
             Section(tr("Как назовёшь?")) {
                 TextField(tr("Например, Мама"), text: $label)
+                    .submitLabel(.done)
+                    .onSubmit { if ready && !busy { add() } }
                     .accessibilityIdentifier("newName")
             }
             Section(tr("Цвет")) {
@@ -339,6 +341,10 @@ struct AddContactView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button(tr("Добавить"), action: add)
                     .disabled(!ready || busy)
+                    // iOS 26 leaves a toolbar button greyed while the keyboard
+                    // is up (a tester typed a name and «Добавить» stayed off
+                    // until he tapped elsewhere): a new button each time.
+                    .id(ready && !busy)
                     .accessibilityIdentifier("addContact")
             }
         }

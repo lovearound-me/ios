@@ -16,8 +16,8 @@ final class AppModel: ObservableObject {
         case main
     }
 
-    /// The circle for «Кому-нибудь на свете» in `justSent`.
-    static let anyoneID = "anyone"
+    /// The bubble for «Кому-нибудь на свете» in `justSent`.
+    nonisolated static let anyoneID = "anyone"
 
     @Published var screen: Screen
     @Published private(set) var session: Session? = nil
@@ -39,6 +39,26 @@ final class AppModel: ObservableObject {
     /// The circle that just sent, filled with a heart for a moment.
     @Published private(set) var justSent: String? = nil
     @Published private(set) var caption: String? = nil
+    /// The one a finger holds: its whole name over the screen.
+    @Published private(set) var peeking: Target? = nil
+    /// The finger slid away while holding: letting go sends nothing.
+    private var holdCancelled = false
+
+    /// Settings → «Вид». Stays on this watch.
+    @Published var layout: WatchLayout {
+        didSet { if demo == nil { WatchLayout.saved = layout } }
+    }
+    /// Settings → «Вибрация»: taps per heart, 0 for none. Stays on this
+    /// watch; the server only hears whether it is none, to send quietly.
+    @Published var taps: Int {
+        didSet {
+            guard demo == nil, taps != oldValue else { return }
+            Taps.count = taps
+            if (taps == 0) != (oldValue == 0), let token = WatchPush.shared.token {
+                Task { await register(token) }
+            }
+        }
+    }
 
     // An incoming signal
     @Published private(set) var incoming = false
@@ -47,7 +67,11 @@ final class AppModel: ObservableObject {
 
     /// The screen edges glow in it; stays on this watch, like on the iPhone.
     @Published var myColor: Int {
-        didSet { if demo == nil { UserDefaults.standard.set(myColor, forKey: "myColor") } }
+        didSet {
+            guard demo == nil else { return }
+            UserDefaults.standard.set(myColor, forKey: "myColor")
+            WidgetData.myColor = myColor
+        }
     }
     nonisolated static var savedColor: Int { UserDefaults.standard.object(forKey: "myColor") as? Int ?? 0 }
 
@@ -70,6 +94,8 @@ final class AppModel: ObservableObject {
         let saved = demo == nil ? Session.load() : nil
         self.demo = demo
         myColor = Self.savedColor
+        layout = WatchLayout.saved
+        taps = Taps.count
         screen = demo == nil && saved == nil ? .signIn : .main
         // Every stored property has its value from here on.
         session = saved
@@ -78,7 +104,8 @@ final class AppModel: ObservableObject {
             let push = WatchPush.shared
             push.onToken = { [weak self] token in Task { await self?.register(token) } }
             push.onHeart = { [weak self] in self?.showSignal() }
-            push.onTap = { [weak self] in self?.showSignal() }
+            // It tapped the wrist already: the glow, without more taps.
+            push.onTap = { [weak self] in self?.showSignal(tapping: false) }
             if saved != nil { Task { await startReceiving() } }
         }
     }
@@ -88,6 +115,11 @@ final class AppModel: ObservableObject {
         contacts.sorted { a, b in
             a.isClose != b.isClose ? a.isClose : a.position < b.position
         }
+    }
+
+    /// What the main screen shows: «Кому-нибудь на свете», then the people.
+    var targets: [Target] {
+        [.anyone] + circles.map(Target.person)
     }
 
     // MARK: Sign in with Apple
@@ -208,7 +240,10 @@ final class AppModel: ObservableObject {
     func signOut(notice: String? = nil) {
         // A demo's «Выйти» only shows the sign-in screen: the watch's real
         // token stays, so a test can't leave a ghost device on the account.
-        if demo == nil { Session.clear() }
+        if demo == nil {
+            Session.clear()
+            WidgetData.clear()
+        }
         session = nil
         contacts = []
         loaded = false
@@ -234,7 +269,14 @@ final class AppModel: ObservableObject {
 
     private func register(_ pushToken: String) async {
         guard let session else { return }
-        try? await API(token: session.token).registerPush(pushToken, sandbox: WatchPush.sandbox)
+        let api = API(token: session.token)
+        do {
+            try await api.registerPush(pushToken, sandbox: WatchPush.sandbox, silent: taps == 0)
+        } catch APIError.status(let code, _) where taps == 0 && (code == 400 || code == 422) {
+            // A server from before «Без вибрации» rejects the field (422):
+            // hearts with a tap beat none.
+            try? await api.registerPush(pushToken, sandbox: WatchPush.sandbox, silent: false)
+        } catch {}
     }
 
     private func loadReceiving() async {
@@ -276,12 +318,14 @@ final class AppModel: ObservableObject {
 
     // MARK: An incoming signal
 
-    /// The wrist tap, the glowing edges and the emoji: a heart that came
-    /// while the app was in front, a tapped notification, «Показать», the demo.
-    func showSignal() {
+    /// The wrist taps («Вибрация»), the glowing edges and the emoji: a heart
+    /// that came while the app was in front, a tapped notification,
+    /// «Показать», the demo.
+    func showSignal(tapping: Bool = true) {
         signalSeed = Int.random(in: 0..<1000)
         incoming = true
-        WKInterfaceDevice.current().play(.notification)
+        if tapping { Taps.play(taps) }
+        if demo == nil { WidgetData.heartCame() }
         let seed = signalSeed
         Task {
             try? await Task.sleep(nanoseconds: 5_500_000_000)
@@ -297,6 +341,7 @@ final class AppModel: ObservableObject {
         do {
             contacts = try await API(token: session.token).contacts()
             loaded = true
+            shareWithWidgets()
             sendingOff = false
         } catch let error as APIError where error.sessionGone {
             signOut(notice: tr("Часы отключены в «Устройствах». Войди снова."))
@@ -306,6 +351,75 @@ final class AppModel: ObservableObject {
             sendingOff = true
         } catch {
             // Offline: keep what is on screen and try on the next refresh.
+        }
+    }
+
+    /// The complication and the Smart Stack draw people from this copy.
+    private func shareWithWidgets() {
+        let people = circles.map { WidgetData.Person(id: $0.id, label: $0.label, color: $0.color, close: $0.isClose) }
+        if people != WidgetData.people { WidgetData.save(people: people) }
+        if WidgetData.myColor != myColor { WidgetData.myColor = myColor }
+    }
+
+    func send(_ target: Target) {
+        switch target {
+        case .anyone: sendAnyone()
+        case .person(let contact): send(contact)
+        }
+    }
+
+    // MARK: A held finger
+
+    /// A finger is down on someone, not yet long enough to show the name.
+    func pressStarted() {
+        if peeking == nil { holdCancelled = false }
+    }
+
+    /// Held long enough: the whole name shows. Slid away: it hides, and
+    /// letting go sends nothing.
+    func holding(_ target: Target, moved: CGFloat) {
+        guard !holdCancelled else { return }
+        if moved > 28 {
+            holdCancelled = true
+            peeking = nil
+            flash(tr("Отменено"))
+            return
+        }
+        if peeking != target {
+            peeking = target
+            WKInterfaceDevice.current().play(.click)
+        }
+    }
+
+    /// The finger let go: what it held goes, unless it slid away.
+    func released(_ target: Target) {
+        defer { holdCancelled = false }
+        guard !holdCancelled, peeking == target else { return }
+        peeking = nil
+        send(target)
+    }
+
+    /// A tap on the shown name, if the finger's own gesture was lost.
+    func sendPeeked() {
+        guard let target = peeking else { return }
+        peeking = nil
+        send(target)
+    }
+
+    func cancelPeek() {
+        guard peeking != nil else { return }
+        peeking = nil
+        flash(tr("Отменено"))
+    }
+
+    /// A caption for a moment, nothing sent.
+    private func flash(_ text: String) {
+        sentGeneration += 1
+        let generation = sentGeneration
+        caption = text
+        Task {
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            if generation == sentGeneration { caption = nil }
         }
     }
 
@@ -393,7 +507,10 @@ final class AppModel: ObservableObject {
     // MARK: Demo
 
     func demoSet(session: Session?, contacts: [Contact], pairing: API.PairingCode? = nil,
-                 expired: Bool = false, justSent: String? = nil, caption: String? = nil, screen: Screen) {
+                 expired: Bool = false, justSent: String? = nil, caption: String? = nil, screen: Screen,
+                 layout: WatchLayout = .hive, peeking: Target? = nil) {
+        self.layout = layout
+        self.peeking = peeking
         self.session = session
         self.receiving = session == nil ? nil : true
         self.contacts = contacts

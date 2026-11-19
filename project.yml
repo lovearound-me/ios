@@ -39,6 +39,8 @@ targets:
       - path: Phone
       - path: Notify/Emoji.swift
       - path: Notify/NotifyLook.swift
+      # The intents the widgets, buttons and Siri send with, and their data.
+      - path: WidgetShared
       - path: i18n
         type: folder
         buildPhase: resources
@@ -46,8 +48,13 @@ targets:
       # Embedded as the companion watch app (Embed Watch Content).
       - target: LoveAroundWatch
       - target: LoveAroundNotify
+      - target: LoveAroundWidgets
       - package: GoogleSignIn
         product: GoogleSignIn
+      # Linked by name, so the archive reads Siri's phrases (without it:
+      # "no AppIntents.framework dependency", and AppShortcuts.strings
+      # "not used in any App Shortcut").
+      - sdk: AppIntents.framework
     info:
       path: Phone/Info.plist
       properties:
@@ -99,6 +106,8 @@ targets:
     sources:
       - path: Notify
       - path: Shared/Strings.swift
+      # A heart came: the widgets' ♥ glows.
+      - path: WidgetShared/WidgetData.swift
       - path: i18n
         type: folder
         buildPhase: resources
@@ -124,17 +133,59 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: NO
 
+  # Home screen, lock screen and StandBy widgets, and (iOS 18) Control
+  # Center buttons (Widgets/). They send with the app's sign-in, kept in the
+  # app group's part of the Keychain.
+  LoveAroundWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+      - path: WidgetShared
+      - path: Shared/Strings.swift
+      - path: Shared/Palette.swift
+      - path: Shared/Config.swift
+      - path: Shared/Keychain.swift
+      - path: i18n
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - sdk: AppIntents.framework
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: Love Around
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, es, pt, de, fr, it, pl, tr, uk, ru, id, ko, zh]
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widgets/LoveAroundWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.me.lovearound.ios]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.widgets
+        PRODUCT_NAME: LoveAroundWidgets
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+
   LoveAroundWatch:
     type: application
     platform: watchOS
     sources:
       - path: Shared
       - path: Watch
+      - path: WidgetShared/WidgetData.swift
       - path: i18n
         type: folder
         buildPhase: resources
     dependencies:
       - package: QRCodeGenerator
+      - target: LoveAroundWatchWidgets
+      - target: LoveAroundWatchNotify
     info:
       path: Watch/Info.plist
       properties:
@@ -156,11 +207,80 @@ targets:
         com.apple.developer.applesignin: [Default]
         # Hearts come to the watch as its own notifications.
         aps-environment: development
+        # The complication and the Smart Stack read the people and the glow;
+        # the Keychain's shared part holds the sign-in for the buttons.
+        com.apple.security.application-groups: [group.me.lovearound.ios]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.watchkitapp
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_NAME: LoveAround
+        TARGETED_DEVICE_FAMILY: "4"
+        GENERATE_INFOPLIST_FILE: NO
+
+  # The watch face's ♥, the Smart Stack's close people and (watchOS 26)
+  # Control Center buttons (WatchWidgets/).
+  LoveAroundWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - path: WatchWidgets
+      - path: WidgetShared
+      - path: Shared/Strings.swift
+      - path: Shared/Palette.swift
+      - path: Shared/Config.swift
+      - path: Shared/Keychain.swift
+      - path: i18n
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - sdk: AppIntents.framework
+    info:
+      path: WatchWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Love Around
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, es, pt, de, fr, it, pl, tr, uk, ru, id, ko, zh]
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: WatchWidgets/LoveAroundWatchWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.me.lovearound.ios]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.watchkitapp.widgets
+        PRODUCT_NAME: LoveAroundWatchWidgets
+        TARGETED_DEVICE_FAMILY: "4"
+        GENERATE_INFOPLIST_FILE: NO
+
+  # The watch's own heart notification, before it shows: the complication's
+  # ♥ starts glowing (WatchNotify/).
+  LoveAroundWatchNotify:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - path: WatchNotify
+      - path: WidgetShared/WidgetData.swift
+    info:
+      path: WatchNotify/Info.plist
+      properties:
+        CFBundleDisplayName: Love Around
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    entitlements:
+      path: WatchNotify/LoveAroundWatchNotify.entitlements
+      properties:
+        com.apple.security.application-groups: [group.me.lovearound.ios]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.watchkitapp.notify
+        PRODUCT_NAME: LoveAroundWatchNotify
         TARGETED_DEVICE_FAMILY: "4"
         GENERATE_INFOPLIST_FILE: NO
 

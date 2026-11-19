@@ -77,9 +77,11 @@ struct API {
     }
 
     /// Hearts come to this watch as its own notifications.
-    func registerPush(_ pushToken: String, sandbox: Bool) async throws {
-        let (status, data) = try await API.send("PUT", "v1/devices/self/push", bearer: token,
-                                                body: ["token": pushToken, "sandbox": sandbox])
+    /// `silent`: «Вибрация» is none, so they come without a tap.
+    func registerPush(_ pushToken: String, sandbox: Bool, silent: Bool) async throws {
+        var body: [String: Any] = ["token": pushToken, "sandbox": sandbox]
+        if silent { body["silent"] = true }
+        let (status, data) = try await API.send("PUT", "v1/devices/self/push", bearer: token, body: body)
         try API.check(status, data)
     }
 

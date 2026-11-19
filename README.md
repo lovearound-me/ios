@@ -27,6 +27,18 @@ iPhone's receiving off.
 - **«Сердечки»** (variant Б of the mockups): a big heart for «Кому-нибудь на
   свете» (once an hour), the close people in circles three to a row, then
   «Вся книга». A tap sends.
+- **Widgets** (`Widgets/`, target LoveAroundWidgets): on the home screen
+  «Один человек» (small, the person picked in the widget's settings) and
+  «Близкие» (medium: four in a row; large: honeycomb with «Кому-нибудь»).
+  A bubble sends a heart without opening the app (App Intents,
+  `WidgetShared/Intents.swift`). On the lock screen and in StandBy, «О тебе
+  думали»: a ♥ that glows in my color for an hour after a heart (the
+  notification extension and the app note the moment in the app group; it
+  never leaves the phone, and nothing is counted). iOS 18: Control Center
+  buttons «♥ <person>» and «✨ Кому-нибудь», also for the lock screen's
+  buttons and the Action button. Siri: «Отправь сердечко Маме в Love Around»
+  (`Phone/Shortcuts.swift`). They sign in with the app's session, which
+  lives in the app group's part of the Keychain.
 - **«Книга»**: «Рядом» in its order (drag to change it), the others; a
   person's card: name, color, «Рядом», their Love ID, removing. «+» adds by
   a Love ID link, also from `lovearound://add/<code>`.
@@ -55,8 +67,23 @@ iPhone's receiving off.
   watch out; «Выйти» on the watch removes it from there too
   (`DELETE /v1/devices/self`). The watch never holds the account's own
   sign-in.
-- **The main screen** is circles, like the Mac menu: «Кому-нибудь на свете»
-  first, then the close people, then everyone else. A tap sends.
+- **The main screen**, as Settings → «Вид» says: «Соты» (the default,
+  bubbles packed like the watch's own app screen, smaller towards the
+  edges), «Кружочки» (like the Mac menu), «Кружочки с именами», «Список».
+  «Кому-нибудь на свете» first, then the close people, then everyone else.
+  A tap sends; a held finger shows the whole name, letting go sends, sliding
+  away cancels.
+- **Widgets** (`WatchWidgets/`): on the watch face «О тебе думали», a ♥
+  round or in a corner that glows in my color for an hour after a heart
+  (the watch's own notification extension, `WatchNotify/`, notes the
+  moment in the app group); in the Smart Stack four close people, a tap
+  opens the app; watchOS 26: Control Center and Action button buttons that
+  send with the watch's device token.
+- **«Вибрация»**: taps per heart, 0–5, three by default (on the watch and in
+  the iPhone's «Уведомление»). With the app in front it plays them all; on a
+  sleeping watch watchOS taps once and the long look plays the rest. None:
+  the watch registers with `silent` and the server sends it passive
+  notifications without sound; the iPhone's extension drops the sound.
 - **A heart for me** comes as the watch's own notification
   (`PUT /v1/devices/self/push`), on the watch's terms: its «Получать
   сердечки» (the same switch as «Принимает» in its card on the phone), its
@@ -125,7 +152,8 @@ the watch in by code, sends one heart and signs out.
 `--demo <name>` draws one screen from made-up data, without signing in. On
 the iPhone: `signin notifyIntro home sent anyone empty signal paused book
 contact add toys board pair settings`; on the watch: `signin exists code
-expired computer connected circles sent anyone empty signal settings glow delete`.
+expired computer connected hive circles named list peek sent anyone empty signal notification
+settings layout vibration glow delete`.
 Made-up people have Russian names in Russian and English ones elsewhere.
 
 ## Translations

@@ -59,7 +59,11 @@ struct DemoPageView: View {
                 switch page {
                 case .computer: ComputerView(code: Demo.code.code)
                 case .settings: SettingsView()
+                case .layout: LayoutView()
+                case .vibration: VibrationView()
                 case .glow: GlowView()
+                case .notification:
+                    SignalNotificationView(color: Palette.color(model.myColor), box: .init("✨💗💖💞💖💗✨"))
                 case .delete: DeleteAccountView()
                 }
             }

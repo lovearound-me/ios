@@ -1,0 +1,3 @@
+"Send a heart to ${person} with ${applicationName}" = "Отправь сердечко ${person} в ${applicationName}";
+"Send a heart with ${applicationName}" = "Отправь сердечко в ${applicationName}";
+"Send a heart to someone in the world with ${applicationName}" = "Отправь сердечко кому-нибудь на свете в ${applicationName}";
