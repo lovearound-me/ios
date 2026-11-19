@@ -813,6 +813,12 @@ final class AppModel: ObservableObject {
 
     private func openAdding(_ invite: String) {
         guard signedIn else { pendingAdd = invite; return }
+        // One's own Love ID, opened from a chat it was sent to: there is no
+        // one to add, say what it is instead.
+        if isOwn(invite) {
+            show(tr("Это твоя ссылка: по ней тебя добавляют другие."))
+            return
+        }
         tab = .book
         pairing = nil
         adding = Adding(invite: invite)
