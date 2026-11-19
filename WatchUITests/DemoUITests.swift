@@ -40,9 +40,13 @@ final class DemoUITests: XCTestCase {
         let app = XCUIApplication.russian(demo: "circles")
         let myColor = app.openSettings(showing: "myColor")
         myColor.tap()
+        // Asked while a page still slides, the slow CI simulator runs out of
+        // time describing the screen (see openSettings): let each slide end.
+        Thread.sleep(forTimeInterval: 1.5)
         let blue = app.buttons["Голубой"].firstMatch
         XCTAssertTrue(blue.waitForExistence(timeout: 10))
         blue.tap()
+        Thread.sleep(forTimeInterval: 1.5)
         XCTAssertTrue(myColor.waitForExistence(timeout: 10))
     }
 
