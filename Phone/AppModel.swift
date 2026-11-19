@@ -101,7 +101,12 @@ final class AppModel: ObservableObject {
     @Published private(set) var signalSeed = 0
 
     /// The screen edges glow in it when a signal comes; stays on this phone.
-    @Published var myColor: Int { didSet { defaults.set(myColor, forKey: "myColor") } }
+    @Published var myColor: Int {
+        didSet {
+            defaults.set(myColor, forKey: "myColor")
+            if demo == nil { WidgetData.myColor = myColor }
+        }
+    }
     /// Off: this iPhone keeps no stream open, so nothing glows here; the
     /// account's other devices get signals as before. Stays on this phone.
     @Published var receiveHere: Bool {
@@ -181,6 +186,7 @@ final class AppModel: ObservableObject {
             defaults = .standard
         }
         myColor = defaults.object(forKey: "myColor") as? Int ?? 1
+        if demo == nil { WidgetData.myColor = myColor }
         receiveHere = defaults.object(forKey: "receiveHere") as? Bool ?? true
         acceptAnyone = defaults.object(forKey: "acceptAnyone") as? Bool ?? true
         anyoneSentAt = defaults.object(forKey: "anyoneSentAt") as? Date
@@ -368,6 +374,9 @@ final class AppModel: ObservableObject {
     func showSignal() {
         signalSeed = Int.random(in: 0..<1000)
         incoming = true
+        // The widgets' ♥ glows for an hour; tapped notifications come here
+        // too, after the extension already said so: it just starts again.
+        if demo == nil { WidgetData.heartCame() }
         Self.playTaps(taps)
         let seed = signalSeed
         Task {
@@ -945,6 +954,7 @@ final class AppModel: ObservableObject {
             push.forget()
             try? FileManager.default.removeItem(at: Self.cacheURL)
             auth.signOut()
+            WidgetData.clear()
         }
         goingOffline?.cancel()
         offline = false
@@ -1027,11 +1037,24 @@ final class AppModel: ObservableObject {
         let last = LastSeen(invite: inviteURL, contacts: contacts, devices: devicesLoaded ? devices : nil)
         cacheSave = Task {
             try? await Task.sleep(nanoseconds: 500_000_000)
-            guard !Task.isCancelled, let data = try? JSONEncoder().encode(last) else { return }
+            guard !Task.isCancelled else { return }
+            Self.shareWithWidgets(last.contacts)
+            guard let data = try? JSONEncoder().encode(last) else { return }
             let url = Self.cacheURL
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         }
+    }
+
+    /// The widgets, Control Center buttons and Siri draw and name people
+    /// from this copy: close first, each group in the owner's order.
+    private static func shareWithWidgets(_ contacts: [Contact]) {
+        let people = contacts
+            .sorted { $0.isClose != $1.isClose ? $0.isClose : $0.position < $1.position }
+            .map { WidgetData.Person(id: $0.id, label: $0.label, color: $0.color, close: $0.isClose) }
+        guard people != WidgetData.people else { return }
+        WidgetData.save(people: people)
+        LoveAroundShortcuts.updateAppShortcutParameters()
     }
 
     // MARK: Demo

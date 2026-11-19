@@ -27,6 +27,18 @@ iPhone's receiving off.
 - **«Сердечки»** (variant Б of the mockups): a big heart for «Кому-нибудь на
   свете» (once an hour), the close people in circles three to a row, then
   «Вся книга». A tap sends.
+- **Widgets** (`Widgets/`, target LoveAroundWidgets): on the home screen
+  «Один человек» (small, the person picked in the widget's settings) and
+  «Близкие» (medium: four in a row; large: honeycomb with «Кому-нибудь»).
+  A bubble sends a heart without opening the app (App Intents,
+  `WidgetShared/Intents.swift`). On the lock screen and in StandBy, «О тебе
+  думали»: a ♥ that glows in my color for an hour after a heart (the
+  notification extension and the app note the moment in the app group; it
+  never leaves the phone, and nothing is counted). iOS 18: Control Center
+  buttons «♥ <person>» and «✨ Кому-нибудь», also for the lock screen's
+  buttons and the Action button. Siri: «Отправь сердечко Маме в Love Around»
+  (`Phone/Shortcuts.swift`). They sign in with the app's session, which
+  lives in the app group's part of the Keychain.
 - **«Книга»**: «Рядом» in its order (drag to change it), the others; a
   person's card: name, color, «Рядом», their Love ID, removing. «+» adds by
   a Love ID link, also from `lovearound://add/<code>`.

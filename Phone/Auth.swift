@@ -76,6 +76,7 @@ final class Auth {
         #endif
         if let text = Keychain.read(Self.keychainAccount) {
             session = try? JSONDecoder().decode(Session.self, from: Data(text.utf8))
+            Keychain.share(Self.keychainAccount)
         }
     }
 

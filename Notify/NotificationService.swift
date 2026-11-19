@@ -15,6 +15,8 @@ final class NotificationService: UNNotificationServiceExtension {
         content.body = NotifyLook.current.text(words: NotifyLook.withWords)
         // «Вибрация» set to none: no sound, and so no vibration.
         if NotifyLook.taps == 0 { content.sound = nil }
+        // The widgets' ♥ glows for an hour.
+        WidgetData.heartCame()
         contentHandler(content)
     }
 }

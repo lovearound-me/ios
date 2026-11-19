@@ -39,6 +39,8 @@ targets:
       - path: Phone
       - path: Notify/Emoji.swift
       - path: Notify/NotifyLook.swift
+      # The intents the widgets, buttons and Siri send with, and their data.
+      - path: WidgetShared
       - path: i18n
         type: folder
         buildPhase: resources
@@ -46,6 +48,7 @@ targets:
       # Embedded as the companion watch app (Embed Watch Content).
       - target: LoveAroundWatch
       - target: LoveAroundNotify
+      - target: LoveAroundWidgets
       - package: GoogleSignIn
         product: GoogleSignIn
     info:
@@ -99,6 +102,8 @@ targets:
     sources:
       - path: Notify
       - path: Shared/Strings.swift
+      # A heart came: the widgets' ♥ glows.
+      - path: WidgetShared/WidgetData.swift
       - path: i18n
         type: folder
         buildPhase: resources
@@ -121,6 +126,43 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.notify
         PRODUCT_NAME: LoveAroundNotify
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+
+  # Home screen, lock screen and StandBy widgets, and (iOS 18) Control
+  # Center buttons (Widgets/). They send with the app's sign-in, kept in the
+  # app group's part of the Keychain.
+  LoveAroundWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+      - path: WidgetShared
+      - path: Shared/Strings.swift
+      - path: Shared/Palette.swift
+      - path: Shared/Config.swift
+      - path: Shared/Keychain.swift
+      - path: i18n
+        type: folder
+        buildPhase: resources
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: Love Around
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, es, pt, de, fr, it, pl, tr, uk, ru, id, ko, zh]
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widgets/LoveAroundWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.me.lovearound.ios]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.widgets
+        PRODUCT_NAME: LoveAroundWidgets
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: NO
 
