@@ -75,9 +75,43 @@ enum WidgetData {
         return until > now ? (id, until) : nil
     }
 
+    // MARK: «Близкие» medium: «›» shows the next four
+
+    static let pageSize = 4
+    /// A minute after the last «›», the first four again.
+    static let pageFor: TimeInterval = 60
+
+    /// Who «›» pages through: the close people, when there are more than
+    /// four of them; otherwise nobody (no arrow, the first four of the book).
+    static func pagedPeople(_ people: [Person]) -> [Person]? {
+        let close = people.filter(\.close)
+        return close.count > pageSize ? close : nil
+    }
+
+    static func pageCount(_ people: [Person]) -> Int {
+        guard let paged = pagedPeople(people) else { return 1 }
+        return (paged.count + pageSize - 1) / pageSize
+    }
+
+    /// The four shown now, and until when (nil: the first, for good).
+    static func page(now: Date = Date()) -> (index: Int, until: Date?) {
+        guard let dict = defaults?.dictionary(forKey: "widgetPage"),
+              let index = dict["page"] as? Int, let at = dict["at"] as? Double, index > 0 else { return (0, nil) }
+        let until = Date(timeIntervalSince1970: at).addingTimeInterval(pageFor)
+        let pages = pageCount(people ?? [])
+        return until > now && index < pages ? (index, until) : (0, nil)
+    }
+
+    static func nextPage(now: Date = Date()) {
+        let pages = pageCount(people ?? [])
+        let next = pages > 1 ? (page(now: now).index + 1) % pages : 0
+        defaults?.set(["page": next, "at": now.timeIntervalSince1970], forKey: "widgetPage")
+        reload()
+    }
+
     /// Signed out: the widgets forget everyone.
     static func clear() {
-        for key in ["widgetPeople", "widgetLastHeart", "widgetSent"] { defaults?.removeObject(forKey: key) }
+        for key in ["widgetPeople", "widgetLastHeart", "widgetSent", "widgetPage"] { defaults?.removeObject(forKey: key) }
         reload()
     }
 
