@@ -97,6 +97,13 @@ extension XCUIApplication {
             if gear.exists { gear.tap() }
             Thread.sleep(forTimeInterval: 1.5)
             if target.waitForExistence(timeout: 10) { return target }
+            // The page came, but the button lies below the fold: the list
+            // makes its rows only as they scroll in.
+            for _ in 0..<4 where !target.exists {
+                swipeUp()
+                _ = target.waitForExistence(timeout: 2)
+            }
+            if target.exists { return target }
         }
         XCTFail("Settings didn't open")
         return target
