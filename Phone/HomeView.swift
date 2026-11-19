@@ -136,6 +136,8 @@ struct AnyoneCircle: View {
                             .font(.app(14))
                             .foregroundStyle(Theme.ink)
                             .lineLimit(1)
+                            // The longest text size on an SE: whole, a little smaller.
+                            .minimumScaleFactor(0.7)
                         // The line is always there, empty while the star is
                         // ready: a cell that grows after a send leaves the
                         // grid's last row over the hint below it.

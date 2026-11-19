@@ -48,6 +48,7 @@ struct SettingsView: View {
                     Button { showingHow = true } label: {
                         HStack {
                             Text(tr("Как это работает"))
+                                .font(.app(16))
                                 .foregroundStyle(Theme.ink)
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -87,6 +88,7 @@ struct SettingsView: View {
     private func pageRow(_ title: String) -> some View {
         HStack {
             Text(title)
+                .font(.app(16))
                 .foregroundStyle(Theme.ink)
             Spacer()
             Image(systemName: "arrow.up.right")
@@ -182,6 +184,7 @@ struct AccountView: View {
                 Link(destination: URL(string: "https://\(Config.webApp)/#/settings/signin")!) {
                     HStack {
                         Text(tr("Способы входа"))
+                            .font(.app(16))
                             .foregroundStyle(Theme.ink)
                         Spacer()
                         Image(systemName: "arrow.up.right")
