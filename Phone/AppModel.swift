@@ -412,6 +412,12 @@ final class AppModel: ObservableObject {
             let state = pushState(token)
             guard state != pushSent else { return }
             do {
+                // A new token (the app reinstalled, a build from the other
+                // environment): the old one goes, or it would get the same hearts.
+                if let old = defaults.string(forKey: "pushToken"), old != token {
+                    try? await api.deletePush(token: old)
+                }
+                defaults.set(token, forKey: "pushToken")
                 if receiveHere {
                     try await api.putPush(token: token, sandbox: Push.sandbox, anyone: acceptAnyone,
                                           pausedUntil: isPaused ? pausedUntil : nil, quietHours: quietHours)

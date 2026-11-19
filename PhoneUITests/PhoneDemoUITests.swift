@@ -331,9 +331,12 @@ extension XCUIApplication {
         }
     }
 
-    /// Settings → «Выйти» → the alert's «Выйти».
+    /// Settings → «Аккаунт» → «Выйти» → the alert's «Выйти».
     func signOut() {
         openTab("Настройки")
+        let account = element("settingsAccount")
+        XCTAssertTrue(account.waitForExistence(timeout: 5))
+        account.tap()
         let signOut = element("signOut")
         for _ in 0..<6 where !signOut.isHittable {
             swipeUp()

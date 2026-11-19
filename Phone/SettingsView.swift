@@ -3,31 +3,27 @@ import UIKit
 
 /// The pages under «Настройки», by what they set.
 enum SettingsPage: Hashable {
-    case who, glow, look, does
+    case account, who, glow, look, does
 }
 
-/// Variant А of the mockups (2026-11-19): like a device's card. This iPhone
-/// up top, a row with its own page for each thing it does, then the account
-/// with the Love ID in it.
+/// Variant А of the mockups, as changed on the phone (2026-11-19): one block
+/// of rows like a device's card, the account first; each row opens its own
+/// page, «Пауза» a menu.
 struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @ObservedObject private var push = Push.shared
-    @State private var confirmSignOut = false
-    @State private var confirmDelete = false
-    @State private var deleting = false
-    @State private var problem: String?
 
     var body: some View {
         NavigationStack(path: $model.settingsPath) {
             List {
                 Section {
-                    header
-                }
-                .listRowBackground(Color.clear)
-
-                Section {
+                    NavigationLink(value: SettingsPage.account) {
+                        SettingsRow(symbol: "person.crop.circle.fill", tint: Theme.link, title: tr("Аккаунт"),
+                                    sub: AccountView.shownEmail(model.email))
+                    }
+                    .accessibilityIdentifier("settingsAccount")
                     NavigationLink(value: SettingsPage.who) {
-                        SettingsRow(symbol: "heart.fill", tint: Theme.link, title: tr("Кто может достучаться"), sub: whoLine)
+                        SettingsRow(symbol: "heart.fill", tint: Theme.heart, title: tr("Кто может достучаться"), sub: whoLine)
                     }
                     .accessibilityIdentifier("settingsWho")
                     NavigationLink(value: SettingsPage.glow) {
@@ -44,72 +40,8 @@ struct SettingsView: View {
                     }
                     .accessibilityIdentifier("settingsDoes")
                     pauseRow
-                }
-                .listRowBackground(Theme.field)
-
-                Section {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(shownEmail)
-                            .foregroundStyle(Theme.ink)
-                        Text(signedInWith)
-                            .font(.system(size: 13))
-                            .foregroundStyle(Theme.muted)
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("account")
-                    if let link = model.inviteURL {
-                        // The share sheet copies too: one row, not two.
-                        ShareLink(item: model.shareText) {
-                            HStack(spacing: 12) {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(verbatim: "Love ID")
-                                        .foregroundStyle(Theme.ink)
-                                    Text(link.replacingOccurrences(of: "https://", with: ""))
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(Theme.muted)
-                                }
-                                Spacer()
-                                Image(systemName: "square.and.arrow.up")
-                                    .foregroundStyle(Theme.link)
-                            }
-                        }
-                        .accessibilityLabel(tr("Поделиться своим Love ID"))
-                        .accessibilityIdentifier("loveID")
-                    }
-                    Link(destination: URL(string: "https://\(Config.webApp)/#/settings/signin")!) {
-                        HStack {
-                            Text(tr("Способы входа"))
-                                .foregroundStyle(Theme.ink)
-                            Spacer()
-                            Image(systemName: "arrow.up.right")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Theme.faint)
-                        }
-                    }
-                    Button(tr("Выйти")) { confirmSignOut = true }
-                        .foregroundStyle(Theme.danger)
-                        .accessibilityIdentifier("signOut")
-                } header: {
-                    Text(tr("Аккаунт"))
                 } footer: {
-                    Text(tr("Love ID — твоя ссылка: по ней тебя добавляют в книгу. Нажми, чтобы отправить или скопировать."))
-                }
-                .listRowBackground(Theme.field)
-
-                Section {
-                    Button(role: .destructive) { confirmDelete = true } label: {
-                        Text(deleting ? tr("Удаляем…") : tr("Удалить аккаунт"))
-                    }
-                    .disabled(deleting)
-                    .accessibilityIdentifier("deleteAccount")
-                } footer: {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if let problem {
-                            Text(problem).foregroundStyle(Theme.danger)
-                        }
-                        Text(tr("Вместе с книгой, устройствами и Love ID."))
-                        Text("Love Around \(model.version)")
-                    }
+                    Text(verbatim: "Love Around \(model.version)")
                 }
                 .listRowBackground(Theme.field)
             }
@@ -118,42 +50,14 @@ struct SettingsView: View {
             .navigationTitle(tr("Настройки"))
             .navigationDestination(for: SettingsPage.self) { page in
                 switch page {
+                case .account: AccountView()
                 case .who: PhoneWhoView()
                 case .glow: PhoneGlowView()
                 case .look: NotifyLookView()
                 case .does: PhoneDoesView()
                 }
             }
-            .alert(tr("Выйти на этом iPhone?"), isPresented: $confirmSignOut) {
-                Button(tr("Выйти"), role: .destructive) { Task { await model.signOutHere() } }
-                Button(tr("Отмена"), role: .cancel) {}
-            } message: {
-                Text(tr("Книга останется в аккаунте."))
-            }
-            .alert(tr("Удалить аккаунт и весь список? Это навсегда."), isPresented: $confirmDelete) {
-                Button(tr("Удалить навсегда"), role: .destructive, action: delete)
-                Button(tr("Не удалять"), role: .cancel) {}
-            }
         }
-    }
-
-    private var header: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "iphone")
-                .font(.system(size: 26))
-                .foregroundStyle(Theme.heart)
-                .frame(width: 58, height: 58)
-                .background(Theme.heartSoft, in: Circle())
-            VStack(alignment: .leading, spacing: 2) {
-                Text(tr("Этот iPhone"))
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Theme.ink)
-                Text(doesLine)
-                    .font(.system(size: 14))
-                    .foregroundStyle(Theme.muted)
-            }
-        }
-        .accessibilityElement(children: .combine)
     }
 
     /// A menu right on the row: three lengths, or «Снять паузу».
@@ -196,10 +100,101 @@ struct SettingsView: View {
     private var doesLine: String {
         model.receiveHere ? tr("Принимает и отправляет") : tr("Отправляет")
     }
+}
+
+/// «Аккаунт»: who is signed in and how, the Love ID, the ways in, signing
+/// out, and at the bottom deleting it all.
+struct AccountView: View {
+    @EnvironmentObject var model: AppModel
+    @State private var confirmSignOut = false
+    @State private var confirmDelete = false
+    @State private var deleting = false
+    @State private var problem: String?
+
+    var body: some View {
+        Form {
+            Section {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(Self.shownEmail(model.email))
+                        .foregroundStyle(Theme.ink)
+                    Text(signedInWith)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.muted)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("account")
+                if let link = model.inviteURL {
+                    // The share sheet copies too: one row, not two.
+                    ShareLink(item: model.shareText) {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(verbatim: "Love ID")
+                                    .foregroundStyle(Theme.ink)
+                                Text(link.replacingOccurrences(of: "https://", with: ""))
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Theme.muted)
+                            }
+                            Spacer()
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundStyle(Theme.link)
+                        }
+                    }
+                    .accessibilityLabel(tr("Поделиться своим Love ID"))
+                    .accessibilityIdentifier("loveID")
+                }
+                Link(destination: URL(string: "https://\(Config.webApp)/#/settings/signin")!) {
+                    HStack {
+                        Text(tr("Способы входа"))
+                            .foregroundStyle(Theme.ink)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Theme.faint)
+                    }
+                }
+                Button(tr("Выйти")) { confirmSignOut = true }
+                    .foregroundStyle(Theme.danger)
+                    .accessibilityIdentifier("signOut")
+            } footer: {
+                Text(tr("Love ID — твоя ссылка: по ней тебя добавляют в книгу. Нажми, чтобы отправить или скопировать."))
+            }
+            .listRowBackground(Theme.field)
+
+            Section {
+                Button(role: .destructive) { confirmDelete = true } label: {
+                    Text(deleting ? tr("Удаляем…") : tr("Удалить аккаунт"))
+                }
+                .disabled(deleting)
+                .accessibilityIdentifier("deleteAccount")
+            } footer: {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let problem {
+                        Text(problem).foregroundStyle(Theme.danger)
+                    }
+                    Text(tr("Вместе с книгой, устройствами и Love ID."))
+                }
+            }
+            .listRowBackground(Theme.field)
+        }
+        .scrollContentBackground(.hidden)
+        .background(Theme.paper)
+        .navigationTitle(tr("Аккаунт"))
+        .navigationBarTitleDisplayMode(.inline)
+        .alert(tr("Выйти на этом iPhone?"), isPresented: $confirmSignOut) {
+            Button(tr("Выйти"), role: .destructive) { Task { await model.signOutHere() } }
+            Button(tr("Отмена"), role: .cancel) {}
+        } message: {
+            Text(tr("Книга останется в аккаунте."))
+        }
+        .alert(tr("Удалить аккаунт и весь список? Это навсегда."), isPresented: $confirmDelete) {
+            Button(tr("Удалить навсегда"), role: .destructive, action: delete)
+            Button(tr("Не удалять"), role: .cancel) {}
+        }
+    }
 
     /// Apple's relay address (…@privaterelay.appleid.com) means nothing to the person.
-    private var shownEmail: String {
-        guard let email = model.email, !email.isEmpty else { return "Apple ID" }
+    static func shownEmail(_ email: String?) -> String {
+        guard let email, !email.isEmpty else { return "Apple ID" }
         return email.hasSuffix("@privaterelay.appleid.com") ? tr("Почту скрыл Apple") : email
     }
 

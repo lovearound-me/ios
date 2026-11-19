@@ -29,13 +29,15 @@ final class Push: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     /// Tapped before the app had set `onTap`, as when the tap launches it.
     private var tappedEarly = false
 
-    /// Development builds get their notifications from Apple's sandbox.
+    /// Whether Apple's sandbox sends this build's notifications: a build
+    /// installed from Xcode or over the cable, signed for development, says
+    /// so in its profile; TestFlight and the App Store carry none.
     static let sandbox: Bool = {
-        #if DEBUG
-        return true
-        #else
-        return false
-        #endif
+        guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+              let data = try? Data(contentsOf: url),
+              let text = String(data: data, encoding: .isoLatin1),
+              let key = text.range(of: "<key>aps-environment</key>") else { return false }
+        return text[key.upperBound...].prefix(100).contains("<string>development</string>")
     }()
 
     /// From `application(_:didFinishLaunchingWithOptions:)`: a tap that

@@ -45,7 +45,7 @@ final class PhoneLiveUITests: XCTestCase {
         shot(app)
 
         app.openTab("Настройки")
-        XCTAssertTrue(app.element("account").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("settingsAccount").waitForExistence(timeout: 5))
         shot(app)
 
         app.signOut()
