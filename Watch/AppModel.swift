@@ -265,8 +265,9 @@ final class AppModel: ObservableObject {
         let api = API(token: session.token)
         do {
             try await api.registerPush(pushToken, sandbox: WatchPush.sandbox, silent: taps == 0)
-        } catch APIError.status(400, _) where taps == 0 {
-            // A server from before «Без вибрации»: hearts with a tap beat none.
+        } catch APIError.status(let code, _) where taps == 0 && (code == 400 || code == 422) {
+            // A server from before «Без вибрации» rejects the field (422):
+            // hearts with a tap beat none.
             try? await api.registerPush(pushToken, sandbox: WatchPush.sandbox, silent: false)
         } catch {}
     }
