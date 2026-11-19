@@ -11,7 +11,7 @@ final class NotificationService: UNNotificationServiceExtension {
             contentHandler(request.content)
             return
         }
-        content.body = NotifyLook.current.text()
+        content.body = NotifyLook.current.text(words: NotifyLook.withWords)
         contentHandler(content)
     }
 }

@@ -125,9 +125,16 @@ final class PhoneDemoUITests: XCTestCase {
         three.tap()
         XCTAssertTrue(three.isSelected)
         XCTAssertFalse(app.element("look-many").isSelected)
+        // «Со словами»: the words come after the emoji in the sample.
+        let words = app.switches["notifyWords"]
+        XCTAssertEqual(words.value as? String, "0")
+        let knob = words.switches.firstMatch
+        (knob.exists ? knob : words).tap()
+        XCTAssertEqual(words.value as? String, "1")
+        XCTAssertTrue(app.element("notifySample").label.hasSuffix("Кто-то думает о тебе"), app.element("notifySample").label)
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(row.waitForExistence(timeout: 5))
-        XCTAssertTrue(row.label.contains("Три эмодзи"), row.label)
+        XCTAssertTrue(row.label.contains("Три эмодзи · со словами"), row.label)
     }
 
     /// Settings → «Кто может достучаться» → «Тихие часы»: the times show,

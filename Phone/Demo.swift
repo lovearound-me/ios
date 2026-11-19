@@ -101,6 +101,7 @@ struct Demo {
             let quiet = name == "settingsWho" ? QuietHours(from: "23:00", to: "08:00", tz: TimeZone.current.identifier) : nil
             model.demoSet(signedIn: true, contacts: people, tab: .settings, quietHours: quiet)
             model.notifyLook = .many
+            model.notifyWords = false
             model.settingsPath = name == "settingsWho" ? [.who] : name == "notifyLook" ? [.look]
                 : name == "settingsAccount" ? [.account] : []
         default:

@@ -94,7 +94,8 @@ struct SettingsView: View {
     }
 
     private var lookLine: String {
-        push.status == .denied ? tr("Выключены в настройках iPhone") : model.notifyLook.name
+        guard push.status != .denied else { return tr("Выключены в настройках iPhone") }
+        return model.notifyWords ? model.notifyLook.name + " · " + tr("со словами") : model.notifyLook.name
     }
 
     private var doesLine: String {
@@ -375,7 +376,7 @@ struct PhoneDoesView: View {
 struct NotifyLookView: View {
     @EnvironmentObject var model: AppModel
     @ObservedObject private var push = Push.shared
-    @State private var sample = NotifyLook.current.text()
+    @State private var sample = NotifyLook.current.text(words: NotifyLook.withWords)
 
     var body: some View {
         Form {
@@ -407,7 +408,7 @@ struct NotifyLookView: View {
                 ForEach(NotifyLook.allCases) { look in
                     Button {
                         model.notifyLook = look
-                        sample = look.text()
+                        sample = look.text(words: model.notifyWords)
                     } label: {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
@@ -437,11 +438,25 @@ struct NotifyLookView: View {
                     .accessibilityAddTraits(model.notifyLook == look ? [.isButton, .isSelected] : .isButton)
                     .accessibilityIdentifier("look-\(look.rawValue)")
                 }
+            }
+            .listRowBackground(Theme.field)
+            Section {
+                Toggle(isOn: $model.notifyWords) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(tr("Со словами"))
+                        Text(tr("После эмодзи: «{words}»", ["words": NotifyLook.words]))
+                            .font(.system(size: 13))
+                            .foregroundStyle(Theme.muted)
+                    }
+                }
+                .accessibilityIdentifier("notifyWords")
             } footer: {
                 Text(tr("Эмодзи выбирает сам iPhone, когда приходит сердечко, каждый раз новые. От кого оно, не видно ни в одном варианте. Часы и браслет показывают то же, что iPhone."))
             }
             .listRowBackground(Theme.field)
         }
+        .tint(Theme.ok)
+        .onChange(of: model.notifyWords) { sample = model.notifyLook.text(words: model.notifyWords) }
         .scrollContentBackground(.hidden)
         .background(Theme.paper)
         .navigationTitle(tr("Уведомление"))

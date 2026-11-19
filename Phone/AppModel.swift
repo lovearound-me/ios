@@ -136,6 +136,8 @@ final class AppModel: ObservableObject {
     }
     /// How a heart's notification reads; the notification extension reads it.
     @Published var notifyLook: NotifyLook { didSet { NotifyLook.current = notifyLook } }
+    /// «Со словами»: «Кто-то думает о тебе» after the emoji.
+    @Published var notifyWords: Bool { didSet { NotifyLook.withWords = notifyWords } }
     /// When each contact last got a signal from here: the book puts them first.
     private var lastSent: [String: Date] { didSet { defaults.set(lastSent, forKey: "lastSent") } }
 
@@ -164,6 +166,7 @@ final class AppModel: ObservableObject {
         pausedUntil = defaults.object(forKey: "pausedUntil") as? Date
         quietHours = (defaults.data(forKey: "quietHours")).flatMap { try? JSONDecoder().decode(QuietHours.self, from: $0) }
         notifyLook = NotifyLook.current
+        notifyWords = NotifyLook.withWords
         lastSent = defaults.dictionary(forKey: "lastSent") as? [String: Date] ?? [:]
 
         stream.anyone = acceptAnyone

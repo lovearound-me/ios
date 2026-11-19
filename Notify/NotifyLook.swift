@@ -1,22 +1,32 @@
 import Foundation
 
-/// How a heart's notification reads (Settings → «Уведомление»). The server
+/// How a heart's notification reads (Settings → «Уведомление»): emoji, and
+/// words after them if «Со словами» is on. The server
 /// sends a bare «♥» and never says who; the iPhone's notification extension
 /// (NotificationService) writes the text from this, new emoji each time.
 /// Watches and bands show the same text as the iPhone.
 enum NotifyLook: String, CaseIterable, Identifiable {
-    case many, three, one, plain, words
+    case many, three, one, plain
 
     var id: String { rawValue }
 
     /// Shared by the app and its notification extension.
     static let appGroup = "group.me.lovearound.ios"
     private static let key = "notifyLook"
+    private static let wordsKey = "notifyWords"
 
     static var current: NotifyLook {
         get { UserDefaults(suiteName: appGroup)?.string(forKey: key).flatMap(NotifyLook.init(rawValue:)) ?? .many }
         set { UserDefaults(suiteName: appGroup)?.set(newValue.rawValue, forKey: key) }
     }
+
+    /// «Со словами»: «Кто-то думает о тебе» after the emoji.
+    static var withWords: Bool {
+        get { UserDefaults(suiteName: appGroup)?.bool(forKey: wordsKey) ?? false }
+        set { UserDefaults(suiteName: appGroup)?.set(newValue, forKey: wordsKey) }
+    }
+
+    static var words: String { tr("Кто-то думает о тебе") }
 
     var name: String {
         switch self {
@@ -24,7 +34,6 @@ enum NotifyLook: String, CaseIterable, Identifiable {
         case .three: return tr("Три эмодзи")
         case .one: return tr("Одно сердечко")
         case .plain: return tr("Простое ♥")
-        case .words: return tr("Словами")
         }
     }
 
@@ -35,7 +44,6 @@ enum NotifyLook: String, CaseIterable, Identifiable {
         case .three: return "🧡🫶😺"
         case .one: return "💗"
         case .plain: return "♥"
-        case .words: return tr("Кто-то думает о тебе")
         }
     }
 
@@ -44,14 +52,16 @@ enum NotifyLook: String, CaseIterable, Identifiable {
     }
 
     /// The notification's text: twelve emoji, as many as float up in the
-    /// app; three; one heart; «♥» from the plain font every band has; words.
-    func text() -> String {
+    /// app; three; one heart; «♥» from the plain font every band has. Then
+    /// the words, if asked.
+    func text(words: Bool) -> String {
+        let emoji: String
         switch self {
-        case .many: return Emoji.warm.shuffled().prefix(12).joined()
-        case .three: return Emoji.warm.shuffled().prefix(3).joined()
-        case .one: return Emoji.hearts.randomElement() ?? "💗"
-        case .plain: return "♥"
-        case .words: return tr("Кто-то думает о тебе")
+        case .many: emoji = Emoji.warm.shuffled().prefix(12).joined()
+        case .three: emoji = Emoji.warm.shuffled().prefix(3).joined()
+        case .one: emoji = Emoji.hearts.randomElement() ?? "💗"
+        case .plain: emoji = "♥"
         }
+        return words ? emoji + " " + Self.words : emoji
     }
 }
