@@ -34,6 +34,25 @@ struct QuietHours: Codable, Equatable {
     var tz: String
 }
 
+extension QuietHours {
+    /// Whether `date` falls in the window, in its own time zone, `from`
+    /// inclusive: as the server's quiet.rs.
+    func contains(_ date: Date) -> Bool {
+        guard let from = Self.minutes(from), let to = Self.minutes(to), from != to else { return false }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: tz) ?? .current
+        let parts = calendar.dateComponents([.hour, .minute], from: date)
+        let now = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+        return from < to ? (from <= now && now < to) : (now >= from || now < to)
+    }
+
+    private static func minutes(_ hhmm: String) -> Int? {
+        let parts = hhmm.split(separator: ":").compactMap { Int($0) }
+        guard parts.count == 2, (0..<24).contains(parts[0]), (0..<60).contains(parts[1]) else { return nil }
+        return parts[0] * 60 + parts[1]
+    }
+}
+
 /// What changes on a device; nil fields stay as they are.
 struct DeviceChange {
     var name: String?
@@ -192,6 +211,20 @@ final class API {
     /// The device joins this account; its token goes to the device, not here.
     func confirmPairing(_ code: String) async throws {
         _ = try await request("POST", "v1/pairing/confirm", body: ["code": code])
+    }
+
+    /// Where this iPhone's notifications go, and when not (docs/schema.md,
+    /// /v1/push). The token is Apple's address of the app on this iPhone.
+    func putPush(token: String, sandbox: Bool, anyone: Bool, pausedUntil: Date?, quietHours: QuietHours?) async throws {
+        var body: [String: Any] = ["token": token, "sandbox": sandbox, "anyone": anyone]
+        body["paused_until"] = pausedUntil.map { ISO8601DateFormatter().string(from: $0) } ?? NSNull()
+        body["quiet_hours"] = quietHours.map { ["from": $0.from, "to": $0.to, "tz": $0.tz] } ?? NSNull()
+        _ = try await request("PUT", "v1/push", body: body)
+    }
+
+    /// This iPhone takes no more notifications for the account.
+    func deletePush(token: String) async throws {
+        _ = try await request("DELETE", "v1/push", body: ["token": token])
     }
 
     func deleteMe() async throws {

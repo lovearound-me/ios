@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Variant Б of the mockups: the big heart for «Кому-нибудь на свете», then
-/// the close people in circles, three to a row, then the whole book.
+/// Variant Б of the mockups, as changed after the first try on a phone
+/// (2026-11-19): «Кому-нибудь на свете» is a circle like the others, first
+/// in «Рядом», and «＋» ends the circles while there is room for more.
 struct HomeView: View {
     @EnvironmentObject var model: AppModel
 
@@ -10,12 +11,10 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 22) {
                 header
                 banners
-                AnyoneHeart()
-                    .frame(maxWidth: .infinity)
+                circles
                 if model.contacts.isEmpty {
                     if model.loaded { EmptyBook() }
                 } else {
-                    people
                     Button { model.tab = .book } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "book.closed")
@@ -47,30 +46,22 @@ struct HomeView: View {
     }
 
     private var header: some View {
-        HStack {
-            HStack(spacing: 8) {
-                Image(systemName: "heart.fill")
-                    .foregroundStyle(Theme.heart)
-                Text("Love Around")
-                    .fontWeight(.bold)
-                    .foregroundStyle(Theme.ink)
-            }
-            .font(.system(size: 17))
-            Spacer()
-            Button { model.adding = AppModel.Adding(invite: "") } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Theme.ink)
-                    .frame(width: 40, height: 40)
-                    .background(Theme.well, in: Circle())
-            }
-            .accessibilityLabel(tr("Добавить по ссылке"))
-            .accessibilityIdentifier("addByLink")
+        HStack(spacing: 8) {
+            Image(systemName: "heart.fill")
+                .foregroundStyle(Theme.heart)
+            Text("Love Around")
+                .fontWeight(.bold)
+                .foregroundStyle(Theme.ink)
         }
+        .font(.system(size: 17))
+        .frame(height: 40)
     }
 
     @ViewBuilder private var banners: some View {
-        if model.isPaused {
+        if !model.receiveHere {
+            Banner(text: tr("Этот iPhone не получает сердечки."),
+                   action: tr("Включить"), symbol: "heart.slash") { model.receiveHere = true }
+        } else if model.isPaused {
             Banner(text: tr("{pause}. Сигналы не придут.", ["pause": model.pauseText]),
                    action: tr("Снять паузу"), symbol: "moon.fill") { model.resume() }
         }
@@ -80,12 +71,13 @@ struct HomeView: View {
         }
     }
 
-    private var people: some View {
+    private var circles: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(model.closeContacts.isEmpty ? tr("Книга") : tr("Рядом"))
+            Text(model.closeContacts.isEmpty && !model.contacts.isEmpty ? tr("Книга") : tr("Рядом"))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.muted)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 16) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10, alignment: .top), count: 3), spacing: 18) {
+                AnyoneCircle()
                 ForEach(model.homeCircles) { contact in
                     Button { model.send(contact) } label: {
                         PersonCircle(contact: contact, sent: model.justSent == contact.id)
@@ -94,54 +86,154 @@ struct HomeView: View {
                     .accessibilityLabel(contact.label)
                     .accessibilityHint(tr("Отправить сердечко"))
                 }
+                if !model.closeFull {
+                    Button(action: model.addToClose) {
+                        AddCircle()
+                    }
+                    .buttonStyle(PressScale())
+                    .accessibilityLabel(tr("Добавить в «Рядом»"))
+                    .accessibilityIdentifier("addToClose")
+                }
             }
+            Text(tr("Кому-нибудь: сердечко случайному человеку, раз в час. Он не узнает, от кого."))
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.muted)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
 
-/// The big heart: a signal to one random person, once an hour.
-struct AnyoneHeart: View {
+/// «Кому-нибудь на свете»: a signal to one random person, once an hour. A
+/// star among the people; dimmed, with the minutes left, while it waits.
+struct AnyoneCircle: View {
     @EnvironmentObject var model: AppModel
+    var size: CGFloat = 76
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let wait = model.anyoneWait(at: context.date)
             let sent = model.justSent == AppModel.anyoneID
-            VStack(spacing: 10) {
-                Button(action: model.sendToAnyone) {
+            Button(action: model.sendToAnyone) {
+                VStack(spacing: 7) {
                     ZStack {
                         Circle()
-                            .fill(Theme.heartSoft)
-                            .frame(width: 168, height: 168)
-                            .background(Circle().fill(Theme.heartSoft.opacity(0.5)).padding(-10))
-                            .shadow(color: Theme.heart.opacity(0.28), radius: 17, y: 14)
-                        Image(systemName: sent ? "sparkles" : "heart.fill")
-                            .font(.system(size: sent ? 72 : 88))
-                            .foregroundStyle(sent ? Theme.star : Theme.heart)
+                            .fill(sent ? Theme.star : Theme.star.opacity(0.18))
+                        Circle()
+                            .strokeBorder(Theme.star, lineWidth: 3)
+                        Image(systemName: "sparkles")
+                            .font(.system(size: size * 0.4, weight: .semibold))
+                            .foregroundStyle(sent ? Color.white : Theme.star)
                             .symbolEffect(.bounce, value: sent)
-                            .contentTransition(.symbolEffect(.replace))
                     }
-                    .opacity(wait != nil && !sent ? 0.55 : 1)
+                    .frame(width: size, height: size)
+                    .opacity(wait != nil && !sent ? 0.5 : 1)
+                    .animation(.spring(duration: 0.3), value: sent)
+                    VStack(spacing: 1) {
+                        Text(tr("Кому-нибудь"))
+                            .font(.system(size: 14))
+                            .foregroundStyle(Theme.ink)
+                            .lineLimit(1)
+                        // The line is always there, empty while the star is
+                        // ready: a cell that grows after a send leaves the
+                        // grid's last row over the hint below it.
+                        Text(wait.map { tr("через {n} мин", ["n": String($0)]) } ?? " ")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.muted)
+                    }
                 }
-                .buttonStyle(PressScale())
-                .disabled(wait != nil)
-                .accessibilityLabel(tr("Кому-нибудь на свете"))
-                .accessibilityIdentifier("anyone")
-                Text(tr("Кому-нибудь на свете"))
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Theme.ink)
-                    .padding(.top, 8)
-                Text(wait.map { tr("Кому-нибудь — через {n} мин", ["n": String($0)]) }
-                     ?? tr("Сигнал уйдёт случайному человеку, раз в час. Он не узнает, от кого."))
-                    .font(.system(size: 14))
-                    .foregroundStyle(Theme.muted)
-                    .multilineTextAlignment(.center)
-                    // Two lines either way, so the circles don't jump up after a tap.
-                    .lineLimit(2, reservesSpace: true)
-                    .frame(maxWidth: 290)
-                    .accessibilityIdentifier("anyoneNote")
             }
-            .padding(.top, 16)
+            .buttonStyle(PressScale())
+            .disabled(wait != nil)
+            // On the button itself: a new element in its place would read as
+            // enabled while it waits.
+            .accessibilityLabel(tr("Кому-нибудь на свете"))
+            .accessibilityValue(wait.map { tr("через {n} мин", ["n": String($0)]) } ?? "")
+            .accessibilityIdentifier("anyone")
+        }
+    }
+}
+
+/// «＋» after the circles: opens who of the book goes into «Рядом».
+struct AddCircle: View {
+    var size: CGFloat = 76
+
+    var body: some View {
+        VStack(spacing: 7) {
+            ZStack {
+                Circle()
+                    .strokeBorder(Theme.faint.opacity(0.75), style: StrokeStyle(lineWidth: 2.5, dash: [6, 5]))
+                Image(systemName: "plus")
+                    .font(.system(size: size * 0.32, weight: .semibold))
+                    .foregroundStyle(Theme.muted)
+            }
+            .frame(width: size, height: size)
+            Text(tr("Добавить"))
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.ink)
+                .lineLimit(1)
+        }
+    }
+}
+
+/// «＋» among the circles: who of the book goes into «Рядом», or someone new.
+struct ChooseCloseView: View {
+    @EnvironmentObject var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        List {
+            Section {
+                Button {
+                    model.addByLinkNext = true
+                    dismiss()
+                } label: {
+                    Label(tr("Новый человек по ссылке"), systemImage: "link")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .accessibilityIdentifier("closeNewByLink")
+            }
+            .listRowBackground(Theme.field)
+            if !model.otherContacts.isEmpty {
+                Section {
+                    ForEach(model.otherContacts) { contact in
+                        HStack(spacing: 14) {
+                            PersonCircle(contact: contact, size: 36, named: false)
+                            Text(contact.label)
+                                .font(.system(size: 17))
+                                .foregroundStyle(Theme.ink)
+                            Spacer()
+                            Button { model.setClose(contact, true) } label: {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundStyle(Theme.link)
+                                    .frame(width: 34, height: 34)
+                                    .background(Theme.heartSoft, in: Circle())
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(model.closeFull)
+                            .accessibilityLabel(tr("Добавить в «Рядом»: {name}", ["name": contact.label]))
+                            .accessibilityIdentifier("makeClose-\(contact.label)")
+                        }
+                    }
+                } header: {
+                    Text(tr("Из книги"))
+                } footer: {
+                    Text(model.closeFull
+                         ? tr("Рядом уже 12 человек: сначала убери кого-нибудь.")
+                         : tr("В «Рядом» {n} из 12.", ["n": String(model.closeContacts.count)]))
+                }
+                .listRowBackground(Theme.field)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(Theme.paper)
+        .navigationTitle(tr("Добавить в «Рядом»"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button(tr("Готово")) { dismiss() }
+                    .accessibilityIdentifier("closeDone")
+            }
         }
     }
 }

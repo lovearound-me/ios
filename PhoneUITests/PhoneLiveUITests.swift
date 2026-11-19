@@ -27,15 +27,11 @@ final class PhoneLiveUITests: XCTestCase {
         XCTAssertTrue(circle.waitForExistence(timeout: 30), "no circle for \(person): the book didn't load")
         shot(app)
         circle.tap()
-        let sent = "\(person) — улетело ♥"
-        let toast = app.element("toast")
-        XCTAssertTrue(toast.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.element("sentGlow").waitForExistence(timeout: 3))
         shot(app)
-        // «Улетело» shows at once and for 2.5 s; if the server says no, a
-        // red toast replaces it. Watch for one a while.
-        let failed = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "identifier == 'toast' AND label != %@", sent)).firstMatch
-        XCTAssertFalse(failed.waitForExistence(timeout: 4), "the server didn't take the heart")
+        // The glow comes at once; if the server says no, a red toast
+        // follows. Watch for one a while.
+        XCTAssertFalse(app.element("toast").waitForExistence(timeout: 4), "the server didn't take the heart")
 
         app.openTab("Книга")
         XCTAssertTrue(app.element("send-\(person)").waitForExistence(timeout: 5))
@@ -49,7 +45,7 @@ final class PhoneLiveUITests: XCTestCase {
         shot(app)
 
         app.openTab("Настройки")
-        XCTAssertTrue(app.element("account").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("settingsAccount").waitForExistence(timeout: 5))
         shot(app)
 
         app.signOut()

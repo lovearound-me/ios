@@ -10,17 +10,8 @@ struct SignalOverlay: View {
 
     @State private var bright = false
 
-    /// The Mac's mix: hearts among hugs, cats, flowers and treats, so it reads
-    /// as warmth from anyone close, not only love.
-    static let warm = [
-        "❤️", "🧡", "💛", "💚", "💙", "💜", "💖", "💕", "💗",
-        "🫂", "🤗", "🫶", "🥰", "😊", "☺️",
-        "😺", "😸", "😻", "😽", "🐈", "🐱",
-        "🐶", "🐻", "🐼", "🦔", "🐰", "🦊", "🐥", "🧸",
-        "💪", "🙌", "👍", "✊", "👏",
-        "☀️", "🌻", "🌷", "🌸", "🌼", "🌈", "🍀", "✨", "⭐️",
-        "☕️", "🍵", "🍪", "🍰", "🍓", "🎈",
-    ]
+    /// The Mac's mix (Notify/Emoji.swift), shared with the notifications.
+    static let warm = Emoji.warm
 
     /// Twelve: enough to feel like a shower, few enough to stay smooth.
     static let count = 12
@@ -90,12 +81,13 @@ struct SignalOverlay: View {
     }
 }
 
-private struct FloatingEmoji: View {
+struct FloatingEmoji: View {
     let char: String
     let x: CGFloat
     let size: CGFloat
     let delay: Double
     let height: CGFloat
+    var duration = 3.8
 
     @State private var up = false
 
@@ -105,7 +97,7 @@ private struct FloatingEmoji: View {
             .position(x: x, y: up ? -size : height + size)
             .opacity(up ? 0.2 : 1)
             .onAppear {
-                withAnimation(.easeOut(duration: 3.8).delay(delay)) { up = true }
+                withAnimation(.easeOut(duration: duration).delay(delay)) { up = true }
             }
     }
 }

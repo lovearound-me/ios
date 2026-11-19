@@ -27,10 +27,21 @@ final class AppModel: ObservableObject {
         var code: String
     }
 
-    /// A line over the tab bar for a moment: «Аня — улетело ♥», or what failed.
+    /// A line over the tab bar for a moment: what failed, or «Скопировано».
     struct Toast: Equatable {
         let text: String
         var failed = false
+    }
+
+    /// A signal just went: the app's edges glow in the person's color and
+    /// emoji float up, as on the Mac. Stars for «Кому-нибудь на свете».
+    struct Outgoing: Equatable {
+        let id = UUID()
+        let color: Color
+        let stars: Bool
+        let seed: Int
+        /// For VoiceOver and the tests: «Аня — улетело ♥».
+        let text: String
     }
 
     /// The circle for «Кому-нибудь на свете» in `justSent`.
@@ -46,19 +57,26 @@ final class AppModel: ObservableObject {
     @Published private(set) var signedIn = false
     @Published private(set) var email: String?
     @Published private(set) var provider: String?
-    @Published private(set) var inviteURL: String?
-    @Published private(set) var contacts: [Contact] = []
+    @Published private(set) var inviteURL: String? { didSet { keepForNextStart() } }
+    @Published private(set) var contacts: [Contact] = [] { didSet { keepForNextStart() } }
     @Published private(set) var loaded = false
-    @Published private(set) var devices: [Device] = []
+    @Published private(set) var devices: [Device] = [] { didSet { keepForNextStart() } }
     @Published private(set) var devicesLoaded = false
     @Published private(set) var devicesProblem: String?
     /// The device cards open in «Игрушки», by id (a demo opens one itself).
     @Published var toysPath: [String] = []
+    /// The pages open in «Настройки».
+    @Published var settingsPath: [SettingsPage] = []
 
     @Published var tab: Tab = .hearts
     @Published var adding: Adding?
     @Published var pairing: Pairing?
+    /// «＋» among the circles: who of the book goes into «Рядом».
+    @Published var choosingClose = false
+    /// «Новый человек по ссылке» in that sheet: the add sheet comes once it closes.
+    var addByLinkNext = false
     @Published private(set) var toast: Toast?
+    @Published private(set) var outgoing: Outgoing?
     /// The circle that just sent, filled for a moment.
     @Published private(set) var justSent: String?
     /// Why the sign-in failed, under its buttons.
@@ -75,16 +93,51 @@ final class AppModel: ObservableObject {
 
     /// The screen edges glow in it when a signal comes; stays on this phone.
     @Published var myColor: Int { didSet { defaults.set(myColor, forKey: "myColor") } }
+    /// Off: this iPhone keeps no stream open, so nothing glows here; the
+    /// account's other devices get signals as before. Stays on this phone.
+    @Published var receiveHere: Bool {
+        didSet {
+            defaults.set(receiveHere, forKey: "receiveHere")
+            guard demo == nil, signedIn else { return }
+            if receiveHere {
+                stream.start()
+            } else {
+                stream.stop()
+                goingOffline?.cancel()
+                offline = false
+            }
+            syncPush()
+        }
+    }
     /// Take signals from «Кому-нибудь на свете» too: the server asks the stream.
     @Published var acceptAnyone: Bool {
         didSet {
             defaults.set(acceptAnyone, forKey: "acceptAnyone")
             stream.anyone = acceptAnyone
             stream.restart()
+            syncPush()
         }
     }
     @Published private(set) var anyoneSentAt: Date? { didSet { defaults.set(anyoneSentAt, forKey: "anyoneSentAt") } }
-    @Published private(set) var pausedUntil: Date? { didSet { defaults.set(pausedUntil, forKey: "pausedUntil") } }
+    @Published private(set) var pausedUntil: Date? {
+        didSet {
+            defaults.set(pausedUntil, forKey: "pausedUntil")
+            syncPush()
+        }
+    }
+    /// A daily window when this iPhone neither glows nor notifies, and
+    /// nothing comes later. Stays on this phone; the server gets it for the
+    /// notifications. Its other devices have their own.
+    @Published var quietHours: QuietHours? {
+        didSet {
+            defaults.set(quietHours.flatMap { try? JSONEncoder().encode($0) }, forKey: "quietHours")
+            syncPush()
+        }
+    }
+    /// How a heart's notification reads; the notification extension reads it.
+    @Published var notifyLook: NotifyLook { didSet { NotifyLook.current = notifyLook } }
+    /// «Со словами»: «Кто-то думает о тебе» after the emoji.
+    @Published var notifyWords: Bool { didSet { NotifyLook.withWords = notifyWords } }
     /// When each contact last got a signal from here: the book puts them first.
     private var lastSent: [String: Date] { didSet { defaults.set(lastSent, forKey: "lastSent") } }
 
@@ -93,18 +146,28 @@ final class AppModel: ObservableObject {
     private var pendingAdd: String?
     private var pendingPair: String?
     private var toastGeneration = 0
+    private var outgoingGeneration = 0
     private var goingOffline: Task<Void, Never>?
     private var saving: Task<Void, Never>?
     private var reorderSave: Task<Void, Never>?
+    private var cacheSave: Task<Void, Never>?
+    let push = Push.shared
+    private var pushSync: Task<Void, Never>?
+    /// What the server last took for this iPhone's notifications.
+    private var pushSent: [String: String]?
 
     init() {
         api = API(auth: auth)
         stream = Stream(auth: auth)
         demo = Demo.fromArguments()
         myColor = defaults.object(forKey: "myColor") as? Int ?? 1
+        receiveHere = defaults.object(forKey: "receiveHere") as? Bool ?? true
         acceptAnyone = defaults.object(forKey: "acceptAnyone") as? Bool ?? true
         anyoneSentAt = defaults.object(forKey: "anyoneSentAt") as? Date
         pausedUntil = defaults.object(forKey: "pausedUntil") as? Date
+        quietHours = (defaults.data(forKey: "quietHours")).flatMap { try? JSONDecoder().decode(QuietHours.self, from: $0) }
+        notifyLook = NotifyLook.current
+        notifyWords = NotifyLook.withWords
         lastSent = defaults.dictionary(forKey: "lastSent") as? [String: Date] ?? [:]
 
         stream.anyone = acceptAnyone
@@ -121,9 +184,15 @@ final class AppModel: ObservableObject {
 
         if let demo {
             demo.apply(to: self)
-        } else if let session = auth.session {
-            signedIn = true
-            email = session.email
+        } else {
+            if let session = auth.session {
+                signedIn = true
+                email = session.email
+                drawLastSeen()
+            }
+            push.onHeart = { [weak self] in self?.receive() }
+            push.onToken = { [weak self] in self?.syncPush() }
+            push.onTap = { [weak self] in self?.tapped() }
         }
     }
 
@@ -133,8 +202,9 @@ final class AppModel: ObservableObject {
     func becameActive() {
         guard demo == nil, signedIn else { return }
         if let until = pausedUntil, until <= Date() { pausedUntil = nil }
-        stream.start()
+        if receiveHere { stream.start() }
         Task { await reload() }
+        Task { await refreshPush() }
     }
 
     func wentToBackground() {
@@ -151,6 +221,7 @@ final class AppModel: ObservableObject {
             inviteURL = me.invite_url
             contacts = try await api.contacts()
             loaded = true
+            keepForNextStart()
             provider = auth.provider
         } catch let error as AuthError where error.endsSession {
             signOut()
@@ -175,7 +246,7 @@ final class AppModel: ObservableObject {
 
     func send(_ contact: Contact) {
         lastSent[contact.id] = Date()
-        sent(contact.id, tr("{name} — улетело ♥", ["name": contact.label])) { api in
+        sent(contact.id, Palette.color(contact.color), tr("{name} — улетело ♥", ["name": contact.label])) { api in
             try await api.signal(contact.id)
         }
     }
@@ -186,15 +257,15 @@ final class AppModel: ObservableObject {
     func sendToAnyone() {
         guard anyoneWait() == nil else { return }
         anyoneSentAt = Date()
-        sent(Self.anyoneID, tr("Кому-нибудь на свете — улетело ✨")) { api in
+        sent(Self.anyoneID, Theme.star, tr("Кому-нибудь на свете — улетело ✨")) { api in
             try await api.signalAnyone()
         }
     }
 
-    private func sent(_ id: String, _ text: String, _ call: @escaping (API) async throws -> Void) {
+    private func sent(_ id: String, _ color: Color, _ text: String, _ call: @escaping (API) async throws -> Void) {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         justSent = id
-        show(text)
+        glow(Outgoing(color: color, stars: id == Self.anyoneID, seed: Int.random(in: 0..<1000), text: text))
         guard demo == nil else { return }
         Task {
             do {
@@ -223,6 +294,20 @@ final class AppModel: ObservableObject {
         return left > 0 ? Int((left / 60).rounded(.up)) : nil
     }
 
+    /// The glow and the emoji for a signal that went; a new one starts over.
+    func glow(_ out: Outgoing) {
+        outgoingGeneration += 1
+        let generation = outgoingGeneration
+        outgoing = out
+        UIAccessibility.post(notification: .announcement, argument: out.text)
+        Task {
+            try? await Task.sleep(nanoseconds: SendGlow.seconds)
+            guard generation == outgoingGeneration else { return }
+            outgoing = nil
+            justSent = nil
+        }
+    }
+
     func show(_ text: String, failed: Bool = false) {
         toastGeneration += 1
         let generation = toastGeneration
@@ -231,16 +316,27 @@ final class AppModel: ObservableObject {
             try? await Task.sleep(nanoseconds: failed ? 4_000_000_000 : 2_500_000_000)
             guard generation == toastGeneration else { return }
             toast = nil
-            justSent = nil
         }
     }
 
     // MARK: Signals in
 
+    /// From the stream, or a notification while the app is in front; both
+    /// come for one heart, so a second one while it glows is the same heart.
     private func receive() {
         // Not shown, and not kept for later: a signal is about the moment.
-        guard !isPaused, !incoming else { return }
+        guard receiveHere, !isPaused, !isQuiet, !incoming else { return }
         showSignal()
+    }
+
+    /// A heart's notification was tapped: the app opens glowing.
+    private func tapped() {
+        guard signedIn, !incoming else { return }
+        Task {
+            // Once the app is on screen, not under the launch.
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            showSignal()
+        }
     }
 
     /// The glowing edges, the hearts, a tap in the hand.
@@ -288,6 +384,64 @@ final class AppModel: ObservableObject {
 
     func resume() {
         pausedUntil = nil
+    }
+
+    var isQuiet: Bool {
+        quietHours?.contains(Date()) == true
+    }
+
+    // MARK: Notifications
+
+    /// iOS's permission (asked once, right after signing in), then the token.
+    func refreshPush() async {
+        guard demo == nil, signedIn else { return }
+        await push.refresh()
+        if push.status == .notDetermined && receiveHere {
+            await push.ask()
+        }
+        syncPush()
+    }
+
+    func askForNotifications() async {
+        await push.ask()
+        syncPush()
+    }
+
+    /// Tells the server where and when this iPhone takes notifications, or
+    /// that it takes none. After a moment, so a turned wheel sends once.
+    func syncPush() {
+        guard demo == nil, signedIn, let token = push.token else { return }
+        pushSync?.cancel()
+        pushSync = Task {
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            guard !Task.isCancelled else { return }
+            let state = pushState(token)
+            guard state != pushSent else { return }
+            do {
+                // A new token (the app reinstalled, a build from the other
+                // environment): the old one goes, or it would get the same hearts.
+                if let old = defaults.string(forKey: "pushToken"), old != token {
+                    try? await api.deletePush(token: old)
+                }
+                defaults.set(token, forKey: "pushToken")
+                if receiveHere {
+                    try await api.putPush(token: token, sandbox: Push.sandbox, anyone: acceptAnyone,
+                                          pausedUntil: isPaused ? pausedUntil : nil, quietHours: quietHours)
+                } else {
+                    try await api.deletePush(token: token)
+                }
+                pushSent = state
+            } catch {
+                // Tried again when the app next comes to the front.
+            }
+        }
+    }
+
+    private func pushState(_ token: String) -> [String: String] {
+        guard receiveHere else { return ["token": token, "off": "1"] }
+        return ["token": token, "anyone": acceptAnyone ? "1" : "0",
+                "paused": isPaused ? (pausedUntil?.timeIntervalSince1970).map { String($0) } ?? "" : "",
+                "quiet": quietHours.map { "\($0.from)-\($0.to)-\($0.tz)" } ?? ""]
     }
 
     // MARK: The book
@@ -379,6 +533,23 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// «＋» among the circles. With nobody in the book there is nobody to
+    /// pick: the add sheet at once.
+    func addToClose() {
+        if contacts.isEmpty {
+            adding = Adding(invite: "")
+        } else {
+            choosingClose = true
+        }
+    }
+
+    /// The «Рядом» picker closed: «Новый человек по ссылке» opens the add sheet.
+    func closePickerClosed() {
+        guard addByLinkNext else { return }
+        addByLinkNext = false
+        adding = Adding(invite: "")
+    }
+
     /// A drag among the circles in the book.
     func moveClose(from source: IndexSet, to destination: Int) {
         var close = closeContacts
@@ -456,6 +627,7 @@ final class AppModel: ObservableObject {
         do {
             devices = try await api.devices()
             devicesLoaded = true
+            keepForNextStart()
             devicesProblem = nil
         } catch let error as AuthError where error.endsSession {
             signOut()
@@ -650,8 +822,9 @@ final class AppModel: ObservableObject {
         email = auth.session?.email
         provider = auth.provider
         tab = .hearts
-        stream.start()
+        if receiveHere { stream.start() }
         Task { await reload() }
+        Task { await refreshPush() }
         if let invite = pendingAdd {
             pendingAdd = nil
             openAdding(invite)
@@ -661,8 +834,22 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// «Выйти»: this iPhone stops taking the account's notifications first,
+    /// while it still can say so.
+    func signOutHere() async {
+        if demo == nil, let token = push.token {
+            pushSync?.cancel()
+            try? await api.deletePush(token: token)
+        }
+        signOut()
+    }
+
     func signOut() {
         stream.stop()
+        pushSync?.cancel()
+        pushSent = nil
+        cacheSave?.cancel()
+        try? FileManager.default.removeItem(at: Self.cacheURL)
         auth.signOut()
         goingOffline?.cancel()
         offline = false
@@ -676,6 +863,9 @@ final class AppModel: ObservableObject {
         devicesLoaded = false
         toysPath = []
         adding = nil
+        choosingClose = false
+        outgoing = nil
+        settingsPath = []
         tab = .hearts
     }
 
@@ -694,10 +884,54 @@ final class AppModel: ObservableObject {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
     }
 
+    // MARK: What was there last time
+
+    /// The book, the devices and the Love ID as the server last gave them:
+    /// drawn at once on the next start, then replaced by the server's, so the
+    /// screens don't start empty and fill in. On this iPhone only, and gone
+    /// on signing out.
+    private struct LastSeen: Codable {
+        var invite: String?
+        var contacts: [Contact]
+        var devices: [Device]?
+    }
+
+    private static var cacheURL: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("last-seen.json")
+    }
+
+    private func drawLastSeen() {
+        guard let data = try? Data(contentsOf: Self.cacheURL),
+              let last = try? JSONDecoder().decode(LastSeen.self, from: data) else { return }
+        inviteURL = last.invite
+        contacts = last.contacts
+        loaded = true
+        if let devices = last.devices {
+            self.devices = devices
+            devicesLoaded = true
+        }
+    }
+
+    /// After a moment: a new order changes many contacts one by one.
+    private func keepForNextStart() {
+        guard demo == nil, signedIn, loaded else { return }
+        cacheSave?.cancel()
+        let last = LastSeen(invite: inviteURL, contacts: contacts, devices: devicesLoaded ? devices : nil)
+        cacheSave = Task {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled, let data = try? JSONEncoder().encode(last) else { return }
+            let url = Self.cacheURL
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        }
+    }
+
     // MARK: Demo
 
     func demoSet(signedIn: Bool, contacts: [Contact], devices: [Device] = [], tab: Tab = .hearts,
-                 justSent: String? = nil, toast: String? = nil, anyoneSentAt: Date? = nil, pausedUntil: Date? = nil) {
+                 justSent: String? = nil, outgoing: Outgoing? = nil, anyoneSentAt: Date? = nil, pausedUntil: Date? = nil,
+                 receiveHere: Bool = true, quietHours: QuietHours? = nil) {
         self.signedIn = signedIn
         email = signedIn ? "anna@example.com" : nil
         provider = signedIn ? "apple.com" : nil
@@ -708,9 +942,12 @@ final class AppModel: ObservableObject {
         devicesLoaded = signedIn
         self.tab = tab
         self.justSent = justSent
-        self.toast = toast.map { Toast(text: $0) }
+        self.outgoing = outgoing
+        toast = nil
         self.anyoneSentAt = anyoneSentAt
+        self.receiveHere = receiveHere
         self.pausedUntil = pausedUntil
+        self.quietHours = quietHours
         lastSent = [:]
     }
 }

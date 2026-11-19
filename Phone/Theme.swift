@@ -19,6 +19,8 @@ enum Theme {
     static let ok = dynamic(0x39744A, 0x8DCB9B)
     static let danger = dynamic(0xB3261E, 0xFF8A80)
     static let star = dynamic(0xD99A1E, 0xE8B54F)
+    /// The pause row's moon.
+    static let indigo = dynamic(0x6474D6, 0x939EEA)
 
     static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {
         Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: dark) : UIColor(hex: light) })

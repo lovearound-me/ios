@@ -6,9 +6,9 @@ import Foundation
 struct Demo {
     let name: String
 
-    static let names = ["signin", "home", "sent", "anyone", "empty", "signal", "paused",
-                        "book", "contact", "add", "toys", "board", "pair", "device", "deviceWho",
-                        "deviceDoes", "deviceBoard", "settings"]
+    static let names = ["signin", "home", "sent", "anyone", "empty", "signal", "paused", "offHere",
+                        "book", "contact", "add", "choose", "toys", "board", "pair", "device", "deviceWho",
+                        "deviceDoes", "deviceBoard", "settings", "settingsAccount", "settingsWho", "notifyLook"]
 
     static func fromArguments() -> Demo? {
         let args = ProcessInfo.processInfo.arguments
@@ -18,13 +18,14 @@ struct Demo {
 
     /// A sheet's screen, shown on its own.
     enum Page {
-        case contact, add, board, pair
+        case contact, add, choose, board, pair
     }
 
     var page: Page? {
         switch name {
         case "contact": return .contact
         case "add": return .add
+        case "choose": return .choose
         case "board": return .board
         case "pair": return .pair
         default: return nil
@@ -61,22 +62,32 @@ struct Demo {
         case "signin":
             model.demoSet(signedIn: false, contacts: [])
         case "sent":
-            model.demoSet(signedIn: true, contacts: people, justSent: "2",
-                          toast: tr("{name} — улетело ♥", ["name": "Аня"]))
+            // The glow starts a moment late, so the screenshot at 3 s catches
+            // the emoji halfway up.
+            model.demoSet(signedIn: true, contacts: people)
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 1_600_000_000)
+                model.send(people[1])
+            }
         case "anyone":
-            model.demoSet(signedIn: true, contacts: people, justSent: AppModel.anyoneID,
-                          toast: tr("Кому-нибудь на свете — улетело ✨"), anyoneSentAt: Date().addingTimeInterval(-60))
+            model.demoSet(signedIn: true, contacts: people)
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 1_600_000_000)
+                model.sendToAnyone()
+            }
         case "empty":
             model.demoSet(signedIn: true, contacts: [])
         case "paused":
             model.demoSet(signedIn: true, contacts: people, pausedUntil: .distantFuture)
+        case "offHere":
+            model.demoSet(signedIn: true, contacts: people, receiveHere: false)
         case "signal":
             model.demoSet(signedIn: true, contacts: people)
             Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 400_000_000)
                 model.showSignal()
             }
-        case "book", "contact", "add":
+        case "book", "contact", "add", "choose":
             model.demoSet(signedIn: true, contacts: people, tab: .book)
         case "toys", "board", "pair":
             model.demoSet(signedIn: true, contacts: people, devices: Demo.devices, tab: .toys)
@@ -86,8 +97,13 @@ struct Demo {
         case "deviceBoard":
             model.demoSet(signedIn: true, contacts: people, devices: Demo.devices, tab: .toys)
             model.toysPath = ["d3"]
-        case "settings":
-            model.demoSet(signedIn: true, contacts: people, tab: .settings)
+        case "settings", "settingsAccount", "settingsWho", "notifyLook":
+            let quiet = name == "settingsWho" ? QuietHours(from: "23:00", to: "08:00", tz: TimeZone.current.identifier) : nil
+            model.demoSet(signedIn: true, contacts: people, tab: .settings, quietHours: quiet)
+            model.notifyLook = .many
+            model.notifyWords = false
+            model.settingsPath = name == "settingsWho" ? [.who] : name == "notifyLook" ? [.look]
+                : name == "settingsAccount" ? [.account] : []
         default:
             model.demoSet(signedIn: true, contacts: people)
         }
