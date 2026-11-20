@@ -331,7 +331,6 @@ final class AppModel: ObservableObject {
         signalSeed = Int.random(in: 0..<1000)
         incoming = true
         if tapping { Taps.play(taps) }
-        if demo == nil { WidgetData.heartCame() }
         let seed = signalSeed
         Task {
             try? await Task.sleep(nanoseconds: 5_500_000_000)

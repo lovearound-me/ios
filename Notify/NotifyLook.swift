@@ -27,12 +27,12 @@ enum NotifyLook: String, CaseIterable, Identifiable {
         set { UserDefaults(suiteName: appGroup)?.set(newValue, forKey: wordsKey) }
     }
 
-    /// «Вибрация»: taps when a heart comes while the app is open, 0 to 5
-    /// (three unless changed). At 0 the notification comes without a sound,
-    /// so iOS doesn't vibrate either.
-    static var taps: Int {
-        get { UserDefaults(suiteName: appGroup)?.object(forKey: tapsKey) as? Int ?? 3 }
-        set { UserDefaults(suiteName: appGroup)?.set(newValue, forKey: tapsKey) }
+    /// «Вибрация», on unless changed. Off: the notification comes without
+    /// a sound, so iOS doesn't vibrate either. (Kept as the 0–5 taps it once
+    /// was: anything above 0 is on.)
+    static var vibrates: Bool {
+        get { (UserDefaults(suiteName: appGroup)?.object(forKey: tapsKey) as? Int ?? 1) > 0 }
+        set { UserDefaults(suiteName: appGroup)?.set(newValue ? 1 : 0, forKey: tapsKey) }
     }
 
     static var words: String { tr("Кто-то думает о тебе") }

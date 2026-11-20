@@ -11,7 +11,6 @@
   "«{name}» подключено": "“{name}” bağlandı",
   "Аккаунт": "Hesap",
   "Аккаунт удалён.": "Hesap silindi.",
-  "Без вибрации": "Titreşim yok",
   "Бирюзовый": "Turkuaz",
   "Близкие": "Yakınlar",
   "В «Рядом»": "“Yakınların”a ekle",
@@ -242,7 +241,6 @@
   "Ссылка-приглашение": "Davet bağlantısı",
   "Старый перестанет работать сразу, и «{name}» отключится, пока ты не вставишь новый в прошивку.": "Eskisi hemen çalışmayı bırakır ve yenisini yazılıma koyana kadar “{name}” bağlantısız kalır.",
   "Старый уже не работает. Мы покажем новый только сейчас: скопируй и вставь в прошивку вместо старого. С ним можно отправлять сердечки от твоего имени, так что никому не показывай.": "Eskisi artık çalışmıyor. Yenisini yalnızca şimdi gösteriyoruz: kopyala ve eskisinin yerine yazılıma koy. Onunla senin adına kalp gönderilebilir, o yüzden kimseye gösterme.",
-  "Столько раз iPhone стукнет, когда сердечко приходит при открытом приложении. Когда оно закрыто, iOS вибрирует сама, один раз.": "Uygulama açıkken kalp geldiğinde iPhone’un kaç kez vuracağı. Kapalıyken iOS kendisi bir kez titreşir.",
   "Так оно выглядит": "Böyle görünür",
   "Так светятся края экрана, когда о тебе думают.": "Biri seni düşündüğünde ekranın kenarları bu renkte parlar.",
   "Так устройство называется во всех твоих приложениях. Видишь название только ты.": "Cihaz tüm uygulamalarında bu adla görünür. Adı yalnızca sen görürsün.",
@@ -302,7 +300,6 @@
   "со словами": "kelimelerle",
   "тихо {from}–{to}": "sessiz {from}–{to}",
   "только что": "az önce",
-  "тук": "tık",
   "увидит твоих людей": "insanlarını görecek",
   "через {n} мин": "{n} dk sonra"
 }

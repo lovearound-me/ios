@@ -11,7 +11,6 @@
   "«{name}» подключено": "«{name}» está conectado",
   "Аккаунт": "Cuenta",
   "Аккаунт удалён.": "Cuenta eliminada.",
-  "Без вибрации": "Sin vibración",
   "Бирюзовый": "Turquesa",
   "Близкие": "Cercanos",
   "В «Рядом»": "A «Los tuyos»",
@@ -242,7 +241,6 @@
   "Ссылка-приглашение": "Enlace de invitación",
   "Старый перестанет работать сразу, и «{name}» отключится, пока ты не вставишь новый в прошивку.": "El antiguo dejará de funcionar al instante y «{name}» se desconectará hasta que pongas el nuevo en el firmware.",
   "Старый уже не работает. Мы покажем новый только сейчас: скопируй и вставь в прошивку вместо старого. С ним можно отправлять сердечки от твоего имени, так что никому не показывай.": "El antiguo ya no funciona. Solo mostramos el nuevo ahora: cópialo y ponlo en el firmware en lugar del antiguo. Con él se pueden enviar corazones en tu nombre, así que no se lo enseñes a nadie.",
-  "Столько раз iPhone стукнет, когда сердечко приходит при открытом приложении. Когда оно закрыто, iOS вибрирует сама, один раз.": "Cuántas veces toca el iPhone cuando llega un corazón con la app abierta. Cuando está cerrada, iOS vibra por su cuenta, una vez.",
   "Так оно выглядит": "Así se ve",
   "Так светятся края экрана, когда о тебе думают.": "Así brillan los bordes de la pantalla cuando alguien piensa en ti.",
   "Так устройство называется во всех твоих приложениях. Видишь название только ты.": "Así se llama el dispositivo en todas tus apps. Solo tú ves el nombre.",
@@ -302,7 +300,6 @@
   "со словами": "con palabras",
   "тихо {from}–{to}": "silencio {from}–{to}",
   "только что": "ahora mismo",
-  "тук": "toc",
   "увидит твоих людей": "verá a tu gente",
   "через {n} мин": "en {n} min"
 }
