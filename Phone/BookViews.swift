@@ -301,27 +301,35 @@ struct AddContactView: View {
                     .labelStyle(.iconOnly)
                     .buttonBorderShape(.capsule)
                 }
+                .foregroundStyle(own ? AnyShapeStyle(Theme.danger) : AnyShapeStyle(.primary))
+                .listRowBackground(own ? Theme.dangerSoft : nil)
             } header: {
                 Text(tr("Ссылка-приглашение"))
             } footer: {
                 if !link.isEmpty && code == nil {
                     Text(tr("Не похоже на ссылку-приглашение")).foregroundStyle(Theme.danger)
-                } else if let code, model.isOwn(code) {
-                    Text(tr("Это твоя собственная ссылка")).foregroundStyle(Theme.danger)
                 }
+            }
+            if own {
+                ownNote
             }
             Section(tr("Как назовёшь?")) {
                 TextField(tr("Например, Мама"), text: $label)
                     .submitLabel(.done)
                     .onSubmit { if ready && !busy { add() } }
                     .accessibilityIdentifier("newName")
+                    .opacity(own ? 0.4 : 1)
+                    .disabled(own)
             }
             Section(tr("Цвет")) {
                 ColorSwatches(selection: Binding(get: { color ?? model.freeColor }, set: { color = $0 }))
+                    .opacity(own ? 0.4 : 1)
+                    .disabled(own)
             }
             Section {
                 Toggle(tr("Рядом"), isOn: Binding(get: { close ?? !model.closeFull }, set: { close = $0 }))
-                    .disabled(model.closeFull)
+                    .disabled(model.closeFull || own)
+                    .opacity(own ? 0.4 : 1)
             } footer: {
                 Text(model.closeFull ? tr("Рядом уже 12 человек: сначала убери кого-нибудь.") : tr("Кружок на главном экране."))
             }
@@ -356,8 +364,44 @@ struct AddContactView: View {
 
     private var code: String? { AppModel.inviteID(from: link) }
 
+    /// One's own link, pasted (or opened) to add oneself.
+    private var own: Bool { code.map { model.isOwn($0) } ?? false }
+
+    /// Under the link when it is one's own: what it is for, a way to send it
+    /// instead, and a way out.
+    private var ownNote: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(Theme.danger)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tr("Это твоя собственная ссылка"))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.danger)
+                        Text(tr("Отправь её тому, кто будет о тебе думать."))
+                            .font(.subheadline)
+                    }
+                }
+                HStack(spacing: 8) {
+                    ShareLink(item: model.shareText) {
+                        Label(tr("Поделиться"), systemImage: "square.and.arrow.up")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.link)
+                    Button(tr("Очистить")) { link = "" }
+                        .buttonStyle(.bordered)
+                        .tint(Theme.ink)
+                }
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+            }
+            .padding(.vertical, 4)
+        }
+        .listRowBackground(Theme.dangerSoft)
+    }
+
     private var ready: Bool {
-        guard let code, !model.isOwn(code) else { return false }
+        guard code != nil, !own else { return false }
         return !label.trimmingCharacters(in: .whitespaces).isEmpty
     }
 

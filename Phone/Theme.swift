@@ -18,6 +18,8 @@ enum Theme {
     static let heartSoft = dynamic(0xFDE3E6, 0x4A2B31)
     static let ok = dynamic(0x39744A, 0x8DCB9B)
     static let danger = dynamic(0xB3261E, 0xFF8A80)
+    /// Behind something that can't be used: one's own link in «Добавить по ссылке».
+    static let dangerSoft = dynamic(0xFCEAE8, 0x442E29)
     static let star = dynamic(0xD99A1E, 0xE8B54F)
     /// The pause row's moon.
     static let indigo = dynamic(0x6474D6, 0x939EEA)
