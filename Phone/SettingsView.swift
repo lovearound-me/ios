@@ -500,29 +500,12 @@ struct NotifyLookView: View {
             }
             .listRowBackground(Theme.field)
             Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text(tr("Вибрация"))
-                        Spacer()
-                        Text(TapCount.words(model.taps))
-                            .foregroundStyle(Theme.muted)
-                            .accessibilityIdentifier("tapsWords")
-                    }
-                    Slider(value: Binding(get: { Double(model.taps) },
-                                          set: { model.taps = Int($0.rounded()) }),
-                           in: Double(TapCount.range.lowerBound)...Double(TapCount.range.upperBound),
-                           step: 1) { editing in
-                        // Let go: what it feels like.
-                        if !editing { AppModel.playTaps(model.taps) }
-                    }
-                    .accessibilityLabel(tr("Вибрация"))
-                    .accessibilityValue(TapCount.words(model.taps))
-                    .accessibilityIdentifier("taps")
-                }
+                Toggle(tr("Вибрация"), isOn: $model.vibrates)
+                    .accessibilityIdentifier("vibration")
             } footer: {
-                Text(model.taps == 0
-                     ? tr("Сердечко придёт без вибрации и без звука.")
-                     : tr("Столько раз iPhone стукнет, когда сердечко приходит при открытом приложении. Когда оно закрыто, iOS вибрирует сама, один раз."))
+                if !model.vibrates {
+                    Text(tr("Сердечко придёт без вибрации и без звука."))
+                }
             }
             .listRowBackground(Theme.field)
             Section {

@@ -11,7 +11,6 @@
   "«{name}» подключено": "“{name}” terhubung",
   "Аккаунт": "Akun",
   "Аккаунт удалён.": "Akun dihapus.",
-  "Без вибрации": "Tanpa getar",
   "Бирюзовый": "Pirus",
   "Близкие": "Orang dekat",
   "В «Рядом»": "Ke “Orang terdekat”",
@@ -245,7 +244,6 @@
   "Ссылка-приглашение": "Tautan undangan",
   "Старый перестанет работать сразу, и «{name}» отключится, пока ты не вставишь новый в прошивку.": "Token lama langsung berhenti bekerja, dan “{name}” terputus sampai kamu memasukkan yang baru ke firmware.",
   "Старый уже не работает. Мы покажем новый только сейчас: скопируй и вставь в прошивку вместо старого. С ним можно отправлять сердечки от твоего имени, так что никому не показывай.": "Token lama sudah tidak berfungsi. Token baru hanya kami tampilkan sekarang: salin dan masukkan ke firmware menggantikan yang lama. Dengan token ini hati bisa dikirim atas namamu, jadi jangan tunjukkan ke siapa pun.",
-  "Столько раз iPhone стукнет, когда сердечко приходит при открытом приложении. Когда оно закрыто, iOS вибрирует сама, один раз.": "Berapa kali iPhone mengetuk saat hati datang ketika aplikasi terbuka. Saat tertutup, iOS bergetar sendiri, sekali.",
   "Так оно выглядит": "Begini tampilannya",
   "Так светятся края экрана, когда о тебе думают.": "Tepi layar menyala dengan warna ini saat seseorang memikirkanmu.",
   "Так устройство называется во всех твоих приложениях. Видишь название только ты.": "Begitulah nama perangkat di semua aplikasimu. Hanya kamu yang melihat nama ini.",
@@ -305,7 +303,6 @@
   "со словами": "dengan kata-kata",
   "тихо {from}–{to}": "tenang {from}–{to}",
   "только что": "baru saja",
-  "тук": "tuk",
   "увидит твоих людей": "akan melihat orang-orangmu",
   "через {n} мин": "dalam {n} mnt"
 }

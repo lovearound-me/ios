@@ -3,16 +3,13 @@ import SwiftUI
 import WidgetKit
 
 /// Home screen: «Один человек» (small) and «Близкие» (medium, large), whose
-/// bubbles send a heart without opening the app. Lock screen and StandBy:
-/// «О тебе думали», a ♥ that glows in my color for an hour after a heart.
-/// iOS 18: Control Center buttons (also for the lock screen and the Action
+/// bubbles send a heart without opening the app. iOS 18: Control Center buttons (also for the lock screen and the Action
 /// button). Nothing here says who sent a heart, when, or how many.
 @main
 struct LoveAroundWidgets: WidgetBundle {
     var body: some Widget {
         PersonWidget()
         CloseWidget()
-        GlowWidget()
         if #available(iOS 18.0, *) {
             PersonControl()
             AnyoneControl()
@@ -371,87 +368,6 @@ struct CloseView: View {
             }
             Spacer(minLength: 0)
         }
-    }
-}
-
-// MARK: «О тебе думали»
-
-struct GlowEntry: TimelineEntry {
-    let date: Date
-    let glowing: Bool
-    let color: Int
-}
-
-struct GlowProvider: TimelineProvider {
-    func placeholder(in context: Context) -> GlowEntry {
-        GlowEntry(date: Date(), glowing: true, color: WidgetData.myColor)
-    }
-
-    func getSnapshot(in context: Context, completion: @escaping (GlowEntry) -> Void) {
-        completion(context.isPreview ? placeholder(in: context) : timeline().entries[0])
-    }
-
-    func getTimeline(in context: Context, completion: @escaping (Timeline<GlowEntry>) -> Void) {
-        completion(timeline())
-    }
-
-    /// Glowing until an hour after the last heart, then not.
-    private func timeline() -> Timeline<GlowEntry> {
-        let now = Date()
-        let color = WidgetData.myColor
-        guard let until = WidgetData.glowsUntil(now: now) else {
-            return Timeline(entries: [GlowEntry(date: now, glowing: false, color: color)], policy: .never)
-        }
-        return Timeline(entries: [GlowEntry(date: now, glowing: true, color: color),
-                                  GlowEntry(date: until, glowing: false, color: color)],
-                        policy: .never)
-    }
-}
-
-struct GlowWidget: Widget {
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "glow", provider: GlowProvider()) { entry in
-            GlowView(entry: entry)
-        }
-        .configurationDisplayName("Thought of you")
-        .description("The heart glows in your color for an hour after someone thinks of you.")
-        .supportedFamilies([.accessoryCircular, .systemSmall])
-        // The small one is for StandBy, not the home screen.
-        .disfavoredLocations([.homeScreen], for: [.systemSmall])
-    }
-}
-
-struct GlowView: View {
-    let entry: GlowEntry
-    @Environment(\.widgetFamily) private var family
-
-    var body: some View {
-        let color = Palette.color(entry.color)
-        Group {
-            if family == .accessoryCircular {
-                ZStack {
-                    AccessoryWidgetBackground()
-                    Image(systemName: entry.glowing ? "heart.fill" : "heart")
-                        .font(.system(size: 24, weight: .semibold))
-                        .widgetAccentable()
-                }
-            } else {
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 72))
-                    .foregroundStyle(entry.glowing ? color : color.opacity(0.25))
-                    .shadow(color: entry.glowing ? color : .clear, radius: 18)
-                    .shadow(color: entry.glowing ? color.opacity(0.6) : .clear, radius: 36)
-            }
-        }
-        .containerBackground(for: .widget) {
-            if family == .accessoryCircular {
-                Color.clear
-            } else {
-                RadialGradient(colors: [entry.glowing ? color.opacity(0.35) : .black, .black],
-                               center: .center, startRadius: 4, endRadius: 120)
-            }
-        }
-        .accessibilityLabel(entry.glowing ? tr("Кто-то думает о тебе") : "Love Around")
     }
 }
 

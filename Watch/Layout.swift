@@ -43,14 +43,10 @@ enum Taps {
         set { UserDefaults.standard.set(newValue, forKey: key) }
     }
 
-    /// `count` taps a heartbeat apart, the first after `delay` seconds.
-    static func play(_ count: Int, after delay: Double = 0) {
+    /// The watch's ordinary notification tap, if «Вибрация» is on.
+    static func play(_ count: Int) {
         guard count > 0 else { return }
-        for i in 0..<count {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay + Double(i) * TapCount.gap) {
-                WKInterfaceDevice.current().play(.start)
-            }
-        }
+        WKInterfaceDevice.current().play(.notification)
     }
 }
 

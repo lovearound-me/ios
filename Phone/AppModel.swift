@@ -152,9 +152,9 @@ final class AppModel: ObservableObject {
     @Published var notifyLook: NotifyLook { didSet { if demo == nil { NotifyLook.current = notifyLook } } }
     /// «Со словами»: «Кто-то думает о тебе» after the emoji.
     @Published var notifyWords: Bool { didSet { if demo == nil { NotifyLook.withWords = notifyWords } } }
-    /// «Вибрация»: taps per heart while the app is open; none also silences
-    /// the notification (the notification extension reads it).
-    @Published var taps: Int { didSet { if demo == nil { NotifyLook.taps = taps } } }
+    /// «Вибрация»: the ordinary buzz of a heart while the app is open; off
+    /// also silences the notification (the notification extension reads it).
+    @Published var vibrates: Bool { didSet { if demo == nil { NotifyLook.vibrates = vibrates } } }
     /// When each contact last got a signal from here: the book puts them first.
     private var lastSent: [String: Date] { didSet { defaults.set(lastSent, forKey: "lastSent") } }
 
@@ -193,7 +193,7 @@ final class AppModel: ObservableObject {
         quietHours = (defaults.data(forKey: "quietHours")).flatMap { try? JSONDecoder().decode(QuietHours.self, from: $0) }
         notifyLook = NotifyLook.current
         notifyWords = NotifyLook.withWords
-        taps = NotifyLook.taps
+        vibrates = NotifyLook.vibrates
         lastSent = defaults.dictionary(forKey: "lastSent") as? [String: Date] ?? [:]
         starting = defaults.bool(forKey: "starting")
         sharedLoveID = defaults.bool(forKey: "sharedLoveID")
@@ -371,30 +371,15 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// The glowing edges, the hearts, taps in the hand («Вибрация»).
+    /// The glowing edges, the hearts, a buzz in the hand («Вибрация»).
     func showSignal() {
         signalSeed = Int.random(in: 0..<1000)
         incoming = true
-        // The widgets' ♥ glows for an hour; tapped notifications come here
-        // too, after the extension already said so: it just starts again.
-        if demo == nil { WidgetData.heartCame() }
-        Self.playTaps(taps)
+        if vibrates { UINotificationFeedbackGenerator().notificationOccurred(.success) }
         let seed = signalSeed
         Task {
             try? await Task.sleep(nanoseconds: 5_500_000_000)
             if signalSeed == seed { incoming = false }
-        }
-    }
-
-    /// `count` firm taps a heartbeat apart.
-    static func playTaps(_ count: Int) {
-        guard count > 0 else { return }
-        let generator = UIImpactFeedbackGenerator(style: .heavy)
-        generator.prepare()
-        for i in 0..<count {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * TapCount.gap) {
-                generator.impactOccurred()
-            }
         }
     }
 
