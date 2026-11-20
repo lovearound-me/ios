@@ -63,6 +63,11 @@ targets:
         CFBundleLocalizations: [en, es, pt, de, fr, it, pl, tr, uk, ru, id, ko, zh]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Other ways Siri may hear the name, Russian Siri above all.
+        INAlternativeAppNames:
+          - INAlternativeAppName: LoveAround
+          - INAlternativeAppName: Лав Эраунд
+          - INAlternativeAppName: Лав Араунд
         LSRequiresIPhoneOS: true
         # lovearound://add/<code> (an invite), lovearound://pair/<code>; and
         # Google's answer to its sign-in, at the reversed client id.

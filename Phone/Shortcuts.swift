@@ -19,19 +19,35 @@ struct SendHeartToPersonIntent: AppIntent {
     }
 }
 
-/// Siri and Shortcuts: «Отправь сердечко Маме в Love Around». The names come
-/// from the widgets' copy of the book (WidgetData), refreshed with it.
+/// Siri and Shortcuts: «Love Around, сердечко Маме». The names come from the
+/// widgets' copy of the book (WidgetData), refreshed with it.
+///
+/// Most phrases start with the app's name: a phrase starting with «Send…»
+/// went to Messages on a real iPhone ("Send a heart with Love Around" became
+/// an SMS reading "heart with Love Around"). Without a person, Siri asks
+/// «Кому?» inside our intent.
 struct LoveAroundShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: SendHeartToPersonIntent(),
                     phrases: [
+                        "\(.applicationName) send a heart to \(\.$person)",
+                        "\(.applicationName) heart \(\.$person)",
+                        "\(.applicationName) send a heart",
+                        "\(.applicationName) heart",
+                        "Heart \(\.$person) with \(.applicationName)",
+                        "Heart \(\.$person) in \(.applicationName)",
+                        "Think of \(\.$person) with \(.applicationName)",
                         "Send a heart to \(\.$person) with \(.applicationName)",
-                        "Send a heart with \(.applicationName)",
                     ],
                     shortTitle: "Send a heart",
                     systemImageName: "heart.fill")
         AppShortcut(intent: SendAnyoneIntent(),
-                    phrases: ["Send a heart to someone in the world with \(.applicationName)"],
+                    phrases: [
+                        "\(.applicationName) someone in the world",
+                        "\(.applicationName) send a heart to someone in the world",
+                        "Heart someone in the world with \(.applicationName)",
+                        "Send a heart to someone in the world with \(.applicationName)",
+                    ],
                     shortTitle: "Someone in the world",
                     systemImageName: "sparkles")
     }

@@ -1,3 +1,12 @@
+"${applicationName} send a heart to ${person}" = "${applicationName}, отправь сердечко ${person}";
+"${applicationName} heart ${person}" = "${applicationName}, сердечко ${person}";
+"${applicationName} send a heart" = "${applicationName}, отправь сердечко";
+"${applicationName} heart" = "${applicationName}, сердечко";
+"Heart ${person} with ${applicationName}" = "Сердечко ${person} в ${applicationName}";
+"Heart ${person} in ${applicationName}" = "Сердечко для ${person} в ${applicationName}";
+"Think of ${person} with ${applicationName}" = "${applicationName}, думаю о ${person}";
 "Send a heart to ${person} with ${applicationName}" = "Отправь сердечко ${person} в ${applicationName}";
-"Send a heart with ${applicationName}" = "Отправь сердечко в ${applicationName}";
+"${applicationName} someone in the world" = "${applicationName}, кому-нибудь на свете";
+"${applicationName} send a heart to someone in the world" = "${applicationName}, отправь сердечко кому-нибудь на свете";
+"Heart someone in the world with ${applicationName}" = "Сердечко кому-нибудь на свете в ${applicationName}";
 "Send a heart to someone in the world with ${applicationName}" = "Отправь сердечко кому-нибудь на свете в ${applicationName}";

@@ -34,7 +34,7 @@ iPhone's receiving off.
   A bubble sends a heart without opening the app (App Intents,
   `WidgetShared/Intents.swift`). Nothing is counted. iOS 18: Control Center
   buttons «♥ <person>» and «✨ Кому-нибудь», also for the lock screen's
-  buttons and the Action button. Siri: «Отправь сердечко Маме в Love Around»
+  buttons and the Action button. Siri: «Love Around, сердечко Маме», "Love Around, send a heart to Mom"
   (`Phone/Shortcuts.swift`). They sign in with the app's session, which
   lives in the app group's part of the Keychain.
 - **«Книга»**: «Рядом» in its order (drag to change it), the others; a

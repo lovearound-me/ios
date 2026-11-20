@@ -29,8 +29,26 @@ struct PersonQuery: EntityStringQuery {
 
     func entities(matching string: String) async throws -> [PersonEntity] {
         (WidgetData.people ?? [])
-            .filter { $0.label.localizedCaseInsensitiveContains(string) }
+            .filter { Self.sounds($0.label, like: string) }
             .map(PersonEntity.init)
+    }
+
+    /// Whether a name Siri heard is this person's: in Latin letters on both
+    /// sides (English Siri hears «Вадим» as "Vadim"), and with another ending
+    /// (Russian Siri hears «Вадиму», «Маме»).
+    static func sounds(_ label: String, like said: String) -> Bool {
+        let a = plain(label), b = plain(said)
+        guard !a.isEmpty, !b.isEmpty else { return false }
+        if a.contains(b) || b.contains(a) { return true }
+        let shorter = min(a.count, b.count)
+        guard shorter >= 3 else { return false }
+        return a.prefix(shorter - 1) == b.prefix(shorter - 1)
+    }
+
+    private static func plain(_ text: String) -> String {
+        let latin = text.applyingTransform(.toLatin, reverse: false) ?? text
+        let bare = latin.applyingTransform(.stripDiacritics, reverse: false) ?? latin
+        return bare.lowercased().filter { $0.isLetter || $0.isNumber }
     }
 
     /// Close people first, as in the app.
