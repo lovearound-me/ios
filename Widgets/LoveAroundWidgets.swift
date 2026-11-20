@@ -28,18 +28,37 @@ struct BookEntry: TimelineEntry {
     let people: [WidgetData.Person]?
     /// The bubble showing its ♥ after a tap.
     let sent: String?
+    /// The medium one's four: 0 is the first.
+    var page = 0
 }
 
-/// The book with the ♥ of a just-tapped bubble, then without it.
+/// The book now, then as the ♥ of a just-tapped bubble goes out and the
+/// medium one goes back to its first four.
 private func bookTimeline() -> Timeline<BookEntry> {
     let now = Date()
     let people = WidgetData.people
-    guard let sent = WidgetData.justSent(now: now) else {
-        return Timeline(entries: [BookEntry(date: now, people: people, sent: nil)], policy: .never)
+    let sent = WidgetData.justSent(now: now)
+    let page = WidgetData.page(now: now)
+    let changes = Set([sent?.until, page.until].compactMap { $0 }).sorted()
+    let entries = ([now] + changes).map { date in
+        BookEntry(date: date, people: people,
+                  sent: WidgetData.justSent(now: date)?.id,
+                  page: WidgetData.page(now: date).index)
     }
-    return Timeline(entries: [BookEntry(date: now, people: people, sent: sent.id),
-                              BookEntry(date: sent.until, people: people, sent: nil)],
-                    policy: .never)
+    return Timeline(entries: entries, policy: .never)
+}
+
+/// «›» on the medium «Близкие»: the next four close people.
+struct NextPageIntent: AppIntent {
+    static var title: LocalizedStringResource = "Next people"
+    static var isDiscoverable = false
+
+    init() {}
+
+    func perform() async throws -> some IntentResult {
+        WidgetData.nextPage()
+        return .result()
+    }
 }
 
 /// Made-up people for the widget gallery: Russian names in Russian.
@@ -267,12 +286,56 @@ struct CloseView: View {
         }
     }
 
-    /// Four in a row.
+    /// Four in a row; with more than four close people, «›» and dots above
+    /// them show the next four.
+    @ViewBuilder
     private func row(_ people: [WidgetData.Person]) -> some View {
+        if let paged = WidgetData.pagedPeople(people) {
+            let pages = WidgetData.pageCount(people)
+            let page = min(entry.page, pages - 1)
+            let four = Array(paged.dropFirst(page * WidgetData.pageSize).prefix(WidgetData.pageSize))
+            VStack(spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(tr("Близкие"))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(WidgetColors.muted)
+                    Spacer()
+                    HStack(spacing: 4) {
+                        ForEach(0..<pages, id: \.self) { i in
+                            Circle()
+                                .fill(i == page ? WidgetColors.ink : WidgetColors.muted.opacity(0.4))
+                                .frame(width: 5, height: 5)
+                        }
+                    }
+                    .accessibilityHidden(true)
+                    Button(intent: NextPageIntent()) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(WidgetColors.ink)
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(WidgetColors.muted.opacity(0.18)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(tr("Следующие"))
+                }
+                bubbles(four, size: 50, keepPlaces: true)
+            }
+        } else {
+            bubbles(Array(people.prefix(WidgetData.pageSize)), size: 56)
+        }
+    }
+
+    private func bubbles(_ people: [WidgetData.Person], size: CGFloat, keepPlaces: Bool = false) -> some View {
         HStack(alignment: .top, spacing: 0) {
-            ForEach(people.prefix(4)) { person in
-                Bubble(person: person, size: 56, sent: entry.sent == person.id)
+            ForEach(people) { person in
+                Bubble(person: person, size: size, sent: entry.sent == person.id)
                     .frame(maxWidth: .infinity)
+            }
+            // A last page of one or two keeps the bubbles where they were.
+            if keepPlaces {
+                ForEach(people.count..<WidgetData.pageSize, id: \.self) { _ in
+                    Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
+                }
             }
         }
     }
