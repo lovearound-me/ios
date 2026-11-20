@@ -19,7 +19,7 @@ case "$app" in
     *)
         bundle=me.lovearound.ios.watchkitapp
         os=watchOS
-        screens="signin exists code expired computer connected hive circles named list peek sent anyone empty signal notification settings layout vibration glow delete"
+        screens="signin exists code expired computer connected hive circles named list peek sent anyone empty signal notification settings layout glow delete"
         ;;
 esac
 

@@ -48,7 +48,7 @@ final class AppModel: ObservableObject {
     @Published var layout: WatchLayout {
         didSet { if demo == nil { WatchLayout.saved = layout } }
     }
-    /// Settings → «Вибрация»: taps per heart, 0 for none. Stays on this
+    /// Settings → «Вибрация»: 1, the ordinary tap; 0, none. Stays on this
     /// watch; the server only hears whether it is none, to send quietly.
     @Published var taps: Int {
         didSet {
@@ -314,6 +314,12 @@ final class AppModel: ObservableObject {
                 receiveProblem = tr("Не получилось. Попробуй ещё раз.")
             }
         }
+    }
+
+    /// The «Вибрация» switch.
+    var vibrates: Bool {
+        get { taps > 0 }
+        set { taps = newValue ? 1 : 0 }
     }
 
     // MARK: An incoming signal
