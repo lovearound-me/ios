@@ -2,13 +2,10 @@ import Foundation
 import WidgetKit
 
 /// What the widgets draw, kept by the app in the app group: the people (for
-/// the bubbles), my color, when a heart last came here (the ♥ glows for an
-/// hour) and what a widget just sent. All of it stays on this device; the
-/// time of a heart is never shown, only "recently", and nothing is counted.
+/// the bubbles), my color and what a widget just sent. All of it stays on
+/// this device, and nothing is counted.
 enum WidgetData {
     static let group = "group.me.lovearound.ios"
-    /// How long the ♥ glows after a heart.
-    static let glowFor: TimeInterval = 3600
     /// How long a bubble shows its ♥ after a tap.
     static let sentFor: TimeInterval = 2
     /// «Кому-нибудь на свете» in `sent`.
@@ -46,19 +43,6 @@ enum WidgetData {
             defaults?.set(newValue, forKey: "widgetMyColor")
             reload()
         }
-    }
-
-    /// A heart came here just now: the ♥ glows until an hour from now.
-    static func heartCame(at date: Date = Date()) {
-        defaults?.set(date, forKey: "widgetLastHeart")
-        reload()
-    }
-
-    /// Until when the ♥ glows, if it does.
-    static func glowsUntil(now: Date = Date()) -> Date? {
-        guard let last = defaults?.object(forKey: "widgetLastHeart") as? Date else { return nil }
-        let until = last.addingTimeInterval(glowFor)
-        return until > now ? until : nil
     }
 
     /// A widget's bubble sent to `id`: it shows a ♥ for a moment.

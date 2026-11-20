@@ -106,8 +106,6 @@ targets:
     sources:
       - path: Notify
       - path: Shared/Strings.swift
-      # A heart came: the widgets' ♥ glows.
-      - path: WidgetShared/WidgetData.swift
       - path: i18n
         type: folder
         buildPhase: resources
@@ -185,7 +183,6 @@ targets:
     dependencies:
       - package: QRCodeGenerator
       - target: LoveAroundWatchWidgets
-      - target: LoveAroundWatchNotify
     info:
       path: Watch/Info.plist
       properties:
@@ -253,34 +250,6 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.watchkitapp.widgets
         PRODUCT_NAME: LoveAroundWatchWidgets
-        TARGETED_DEVICE_FAMILY: "4"
-        GENERATE_INFOPLIST_FILE: NO
-
-  # The watch's own heart notification, before it shows: the complication's
-  # ♥ starts glowing (WatchNotify/).
-  LoveAroundWatchNotify:
-    type: app-extension
-    platform: watchOS
-    sources:
-      - path: WatchNotify
-      - path: WidgetShared/WidgetData.swift
-    info:
-      path: WatchNotify/Info.plist
-      properties:
-        CFBundleDisplayName: Love Around
-        CFBundleShortVersionString: $(MARKETING_VERSION)
-        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.usernotifications.service
-          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
-    entitlements:
-      path: WatchNotify/LoveAroundWatchNotify.entitlements
-      properties:
-        com.apple.security.application-groups: [group.me.lovearound.ios]
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: me.lovearound.ios.watchkitapp.notify
-        PRODUCT_NAME: LoveAroundWatchNotify
         TARGETED_DEVICE_FAMILY: "4"
         GENERATE_INFOPLIST_FILE: NO
 

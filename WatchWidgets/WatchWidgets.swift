@@ -2,14 +2,14 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-/// On the watch face: «О тебе думали», a ♥ that glows in my color for an
-/// hour after a heart, round (A) or in a corner (Б). In the Smart Stack:
+/// On the watch face: a ♥ in my color, round (A) or in a corner (Б), that
+/// opens the app. In the Smart Stack:
 /// four close people; a tap opens the app. watchOS 26: Control Center and
 /// Action button buttons that send. Never who, when, or how many.
 @main
 struct LoveAroundWatchWidgets: WidgetBundle {
     var body: some Widget {
-        GlowComplication()
+        HeartComplication()
         CloseStackWidget()
         if #available(watchOS 26.0, *) {
             WatchPersonControl()
@@ -18,72 +18,60 @@ struct LoveAroundWatchWidgets: WidgetBundle {
     }
 }
 
-// MARK: «О тебе думали»
+// MARK: ♥ on the watch face
 
-struct GlowEntry: TimelineEntry {
+struct HeartEntry: TimelineEntry {
     let date: Date
-    let glowing: Bool
     let color: Int
 }
 
-struct GlowProvider: TimelineProvider {
-    func placeholder(in context: Context) -> GlowEntry {
-        GlowEntry(date: Date(), glowing: true, color: WidgetData.myColor)
+struct HeartProvider: TimelineProvider {
+    func placeholder(in context: Context) -> HeartEntry {
+        HeartEntry(date: Date(), color: WidgetData.myColor)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (GlowEntry) -> Void) {
-        completion(context.isPreview ? placeholder(in: context) : timeline().entries[0])
+    func getSnapshot(in context: Context, completion: @escaping (HeartEntry) -> Void) {
+        completion(placeholder(in: context))
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<GlowEntry>) -> Void) {
-        completion(timeline())
-    }
-
-    private func timeline() -> Timeline<GlowEntry> {
-        let now = Date()
-        let color = WidgetData.myColor
-        guard let until = WidgetData.glowsUntil(now: now) else {
-            return Timeline(entries: [GlowEntry(date: now, glowing: false, color: color)], policy: .never)
-        }
-        return Timeline(entries: [GlowEntry(date: now, glowing: true, color: color),
-                                  GlowEntry(date: until, glowing: false, color: color)],
-                        policy: .never)
+    func getTimeline(in context: Context, completion: @escaping (Timeline<HeartEntry>) -> Void) {
+        completion(Timeline(entries: [placeholder(in: context)], policy: .never))
     }
 }
 
-struct GlowComplication: Widget {
+/// A ♥ in my color, round (A) or in a corner (Б): a tap opens the app.
+struct HeartComplication: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "glow", provider: GlowProvider()) { entry in
-            GlowMark(entry: entry)
+        StaticConfiguration(kind: "glow", provider: HeartProvider()) { entry in
+            HeartMark(entry: entry)
         }
-        .configurationDisplayName("Thought of you")
-        .description("The heart glows in your color for an hour after someone thinks of you.")
+        .configurationDisplayName("Love Around")
+        .description("A heart on the watch face: a tap opens Love Around.")
         .supportedFamilies([.accessoryCircular, .accessoryCorner])
     }
 }
 
-struct GlowMark: View {
-    let entry: GlowEntry
+struct HeartMark: View {
+    let entry: HeartEntry
     @Environment(\.widgetFamily) private var family
 
     var body: some View {
-        let color = Palette.color(entry.color)
-        let heart = Image(systemName: entry.glowing ? "heart.fill" : "heart")
-            .foregroundStyle(entry.glowing ? color : Color.gray)
-            .shadow(color: entry.glowing ? color : .clear, radius: 6)
+        let heart = Image(systemName: "heart.fill")
+            .font(.system(size: 22, weight: .semibold))
+            .foregroundStyle(Palette.color(entry.color))
             .widgetAccentable()
         Group {
             if family == .accessoryCorner {
-                heart.font(.system(size: 22, weight: .semibold))
+                heart
             } else {
                 ZStack {
                     AccessoryWidgetBackground()
-                    heart.font(.system(size: 22, weight: .semibold))
+                    heart
                 }
             }
         }
         .containerBackground(Color.clear, for: .widget)
-        .accessibilityLabel(entry.glowing ? tr("Кто-то думает о тебе") : "Love Around")
+        .accessibilityLabel("Love Around")
     }
 }
 
@@ -92,7 +80,6 @@ struct GlowMark: View {
 struct BookEntry: TimelineEntry {
     let date: Date
     let people: [WidgetData.Person]?
-    let glowing: Bool
 }
 
 struct BookProvider: TimelineProvider {
@@ -103,7 +90,7 @@ struct BookProvider: TimelineProvider {
     }()
 
     func placeholder(in context: Context) -> BookEntry {
-        BookEntry(date: Date(), people: Self.sample, glowing: false)
+        BookEntry(date: Date(), people: Self.sample)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (BookEntry) -> Void) {
@@ -115,14 +102,7 @@ struct BookProvider: TimelineProvider {
     }
 
     private func timeline() -> Timeline<BookEntry> {
-        let now = Date()
-        let people = WidgetData.people
-        guard let until = WidgetData.glowsUntil(now: now) else {
-            return Timeline(entries: [BookEntry(date: now, people: people, glowing: false)], policy: .never)
-        }
-        return Timeline(entries: [BookEntry(date: now, people: people, glowing: true),
-                                  BookEntry(date: until, people: people, glowing: false)],
-                        policy: .never)
+        Timeline(entries: [BookEntry(date: Date(), people: WidgetData.people)], policy: .never)
     }
 }
 
@@ -147,8 +127,8 @@ struct CloseStackView: View {
                 Text(verbatim: "Love Around")
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
-                Image(systemName: entry.glowing ? "heart.fill" : "heart")
-                    .foregroundStyle(entry.glowing ? Palette.color(WidgetData.myColor) : Color.gray)
+                Image(systemName: "heart.fill")
+                    .foregroundStyle(Palette.color(WidgetData.myColor))
                     .font(.system(size: 13))
             }
             if let people = entry.people, !people.isEmpty {

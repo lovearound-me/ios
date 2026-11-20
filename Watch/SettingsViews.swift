@@ -36,12 +36,16 @@ struct SettingsView: View {
                 SettingLine(title: tr("Вид"), value: model.layout.name)
             }
             .accessibilityIdentifier("layout")
-            NavigationLink {
-                VibrationView()
-            } label: {
-                SettingLine(title: tr("Вибрация"), value: TapCount.words(model.taps))
+            VStack(alignment: .leading, spacing: 2) {
+                Toggle(tr("Вибрация"), isOn: $model.vibrates)
+                    .accessibilityIdentifier("vibration")
+                if !model.vibrates {
+                    Text(tr("Сердечко придёт тихо: без тапа и без звука. Его будет видно в уведомлениях."))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            .accessibilityIdentifier("vibration")
             if let email = model.session?.email {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(tr("Аккаунт"))
@@ -123,40 +127,6 @@ struct LayoutView: View {
             }
         }
         .navigationTitle(tr("Вид"))
-    }
-}
-
-/// «Вибрация»: how many taps a heart plays, none to five.
-struct VibrationView: View {
-    @EnvironmentObject var model: AppModel
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 8) {
-                Text(TapCount.words(model.taps))
-                    .font(.system(size: 17, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .accessibilityIdentifier("tapsWords")
-                Slider(value: Binding(get: { Double(model.taps) },
-                                      set: { model.taps = Int($0.rounded()) }),
-                       in: Double(TapCount.range.lowerBound)...Double(TapCount.range.upperBound),
-                       step: 1)
-                    .accessibilityLabel(tr("Вибрация"))
-                    .accessibilityIdentifier("taps")
-                Button(tr("Попробовать")) { Taps.play(model.taps) }
-                    .disabled(model.taps == 0)
-                    .accessibilityIdentifier("tapsTry")
-                Text(model.taps == 0
-                     ? tr("Сердечко придёт тихо: без тапа и без звука. Его будет видно в уведомлениях.")
-                     : tr("Столько раз часы стукнут, когда придёт сердечко. Если часы спят, первый стук делает сам watchOS, остальные приходят, когда покажется уведомление."))
-                    .font(.system(size: 12))
-                    .foregroundStyle(Palette.muted)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .navigationTitle(tr("Вибрация"))
     }
 }
 

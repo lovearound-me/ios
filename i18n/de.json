@@ -11,7 +11,6 @@
   "«{name}» подключено": "„{name}“ ist verbunden",
   "Аккаунт": "Konto",
   "Аккаунт удалён.": "Konto gelöscht.",
-  "Без вибрации": "Keine Vibration",
   "Бирюзовый": "Türkis",
   "Близкие": "Nahestehende",
   "В «Рядом»": "Zu „Deine Lieben“",
@@ -203,7 +202,6 @@
   "Получать сердечки на этом iPhone": "Herzen auf diesem iPhone empfangen",
   "Помощь": "Hilfe",
   "Понятно": "Verstanden",
-  "Попробовать": "Ausprobieren",
   "После эмодзи: «{words}»": "Nach den Emojis: „{words}“",
   "Почта": "E-Mail",
   "Почта и пароль": "E-Mail und Passwort",
@@ -246,8 +244,6 @@
   "Ссылка-приглашение": "Einladungslink",
   "Старый перестанет работать сразу, и «{name}» отключится, пока ты не вставишь новый в прошивку.": "Der alte funktioniert sofort nicht mehr, und „{name}“ ist getrennt, bis du den neuen in die Firmware einträgst.",
   "Старый уже не работает. Мы покажем новый только сейчас: скопируй и вставь в прошивку вместо старого. С ним можно отправлять сердечки от твоего имени, так что никому не показывай.": "Der alte funktioniert nicht mehr. Den neuen zeigen wir nur jetzt: Kopiere ihn und trage ihn statt des alten in die Firmware ein. Damit lassen sich in deinem Namen Herzen senden, also zeig ihn niemandem.",
-  "Столько раз iPhone стукнет, когда сердечко приходит при открытом приложении. Когда оно закрыто, iOS вибрирует сама, один раз.": "So oft tippt dein iPhone, wenn ein Herz kommt, während die App offen ist. Ist sie geschlossen, vibriert iOS selbst, einmal.",
-  "Столько раз часы стукнут, когда придёт сердечко. Если часы спят, первый стук делает сам watchOS, остальные приходят, когда покажется уведомление.": "So oft tippt die Uhr, wenn ein Herz kommt. Schläft die Uhr, tippt watchOS selbst zuerst, der Rest kommt, wenn die Mitteilung erscheint.",
   "Так оно выглядит": "So sieht sie aus",
   "Так светятся края экрана, когда о тебе думают.": "In dieser Farbe leuchten die Bildschirmränder, wenn jemand an dich denkt.",
   "Так устройство называется во всех твоих приложениях. Видишь название только ты.": "So heißt das Gerät in all deinen Apps. Den Namen siehst nur du.",
@@ -307,7 +303,6 @@
   "со словами": "mit Worten",
   "тихо {from}–{to}": "Ruhe {from}–{to}",
   "только что": "gerade eben",
-  "тук": "poch",
   "увидит твоих людей": "sieht deine Menschen",
   "через {n} мин": "in {n} Min."
 }
