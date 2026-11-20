@@ -98,14 +98,12 @@ final class SignalNotificationController: WKUserNotificationHostingController<Si
 
     /// watchOS shows the dynamic view only once this has been called on it;
     /// without it, it waits, then falls back to the static look. watchOS has
-    /// tapped once already; the rest of «Вибрация»'s taps come now.
+    /// tapped once already (or not at all, with «Вибрация» off).
     override func didReceive(_ notification: UNNotification) {
         wave.text = SignalNotificationView.hearts(in: notification.request.content.body)
-        Taps.play(Taps.count - 1, after: 0.35)
         // There's nothing to read or answer: the heart goes away by itself,
         // like the app's own, instead of waiting for «Закрыть» under it.
-        let taps = 0.35 + Double(max(Taps.count - 1, 0)) * TapCount.gap
-        DispatchQueue.main.asyncAfter(deadline: .now() + max(Self.shownFor, taps + 1.5)) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.shownFor) { [weak self] in
             self?.performDismissAction()
         }
     }

@@ -79,11 +79,10 @@ iPhone's receiving off.
   moment in the app group); in the Smart Stack four close people, a tap
   opens the app; watchOS 26: Control Center and Action button buttons that
   send with the watch's device token.
-- **«Вибрация»**: taps per heart, 0–5, three by default (on the watch and in
-  the iPhone's «Уведомление»). With the app in front it plays them all; on a
-  sleeping watch watchOS taps once and the long look plays the rest. None:
-  the watch registers with `silent` and the server sends it passive
-  notifications without sound; the iPhone's extension drops the sound.
+- **«Вибрация»**: on the watch a switch, on by default: the ordinary tap
+  of a notification, or none. Off: the watch registers with `silent` and
+  the server sends it passive notifications without sound. The iPhone's
+  «Уведомление» keeps 0–5 taps; at none its extension drops the sound.
 - **A heart for me** comes as the watch's own notification
   (`PUT /v1/devices/self/push`), on the watch's terms: its «Получать
   сердечки» (the same switch as «Принимает» in its card on the phone), its
@@ -153,7 +152,7 @@ the watch in by code, sends one heart and signs out.
 the iPhone: `signin notifyIntro home sent anyone empty signal paused book
 contact add toys board pair settings`; on the watch: `signin exists code
 expired computer connected hive circles named list peek sent anyone empty signal notification
-settings layout vibration glow delete`.
+settings layout glow delete`.
 Made-up people have Russian names in Russian and English ones elsewhere.
 
 ## Translations

@@ -31,13 +31,15 @@ enum WatchLayout: String, CaseIterable, Identifiable {
     }
 }
 
-/// The watch's «Вибрация» (TapCount): the taps a heart plays.
+/// The watch's «Вибрация»: on, the one ordinary tap of a notification; off,
+/// none. (It was 0–5 taps; more than one is now just «on».)
 enum Taps {
     private static let key = "taps"
 
-    /// Read by the notification's long look too, which runs without the model.
+    /// 1 or 0. Read by the notification's long look too, which runs without
+    /// the model.
     static var count: Int {
-        get { UserDefaults.standard.object(forKey: key) as? Int ?? TapCount.standard }
+        get { min(UserDefaults.standard.object(forKey: key) as? Int ?? 1, 1) }
         set { UserDefaults.standard.set(newValue, forKey: key) }
     }
 
