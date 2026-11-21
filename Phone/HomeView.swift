@@ -36,6 +36,9 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("wholeBook")
                 }
+                if !model.contacts.isEmpty, let link = model.inviteURL {
+                    MyLoveIDRow(link: link)
+                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -285,6 +288,49 @@ struct PersonCircle: View {
 
     private var initial: String {
         contact.label.trimmingCharacters(in: .whitespaces).first.map { String($0).uppercased() } ?? "♥"
+    }
+}
+
+/// «Мой Love ID» under «Вся книга» (variant Б, 2026-11-21): new people
+/// found it only in Settings. A tap opens the share sheet, which copies too.
+struct MyLoveIDRow: View {
+    @EnvironmentObject var model: AppModel
+    let link: String
+
+    var body: some View {
+        let color = Palette.color(model.myColor)
+        ShareLink(item: model.shareText) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(color.opacity(0.2))
+                    Circle().strokeBorder(color, lineWidth: 2)
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(color)
+                }
+                .frame(width: 30, height: 30)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tr("Мой Love ID"))
+                        .font(.app(16))
+                        .foregroundStyle(Theme.ink)
+                    Text(link.replacingOccurrences(of: "https://", with: ""))
+                        .font(.app(13))
+                        .foregroundStyle(Theme.muted)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "square.and.arrow.up")
+                    .font(.app(17))
+                    .foregroundStyle(Theme.link)
+            }
+            .padding(.horizontal, 16)
+            .frame(minHeight: 60)
+            .background(Theme.field, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture().onEnded { model.openedShare() })
+        .accessibilityLabel(tr("Поделиться своим Love ID"))
+        .accessibilityIdentifier("homeLoveID")
     }
 }
 

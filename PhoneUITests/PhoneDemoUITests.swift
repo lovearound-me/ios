@@ -32,6 +32,14 @@ final class PhoneDemoUITests: XCTestCase {
         XCTAssertFalse(star.isEnabled)
     }
 
+    /// «Мой Love ID» under «Вся книга»: one's own link without going to Settings.
+    func testOwnLoveIDOnHome() {
+        let app = XCUIApplication.russian(demo: "home")
+        let row = app.buttons["homeLoveID"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        XCTAssertEqual(row.label, "Поделиться своим Love ID")
+    }
+
     /// «＋» after the circles → «Новый человек по ссылке» → the add sheet.
     func testAddByLink() {
         let app = XCUIApplication.russian(demo: "home")
