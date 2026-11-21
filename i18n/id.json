@@ -304,5 +304,8 @@
   "тихо {from}–{to}": "tenang {from}–{to}",
   "только что": "baru saja",
   "увидит твоих людей": "akan melihat orang-orangmu",
-  "через {n} мин": "dalam {n} mnt"
+  "через {n} мин": "dalam {n} mnt",
+  "Убирать само": "Tutup sendiri",
+  "Уведомление с сердечком уйдёт с экрана через 5 секунд.": "Notifikasi hati hilang dari layar setelah 5 detik.",
+  "Уведомление с сердечком останется, пока не закроешь его.": "Notifikasi hati tetap ada sampai kamu menutupnya."
 }

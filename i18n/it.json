@@ -304,5 +304,8 @@
   "тихо {from}–{to}": "silenzio {from}–{to}",
   "только что": "proprio ora",
   "увидит твоих людей": "vedrà le tue persone",
-  "через {n} мин": "tra {n} min"
+  "через {n} мин": "tra {n} min",
+  "Убирать само": "Nascondi da sola",
+  "Уведомление с сердечком уйдёт с экрана через 5 секунд.": "La notifica del cuore lascia lo schermo dopo 5 secondi.",
+  "Уведомление с сердечком останется, пока не закроешь его.": "La notifica del cuore resta finché non la chiudi."
 }

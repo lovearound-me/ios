@@ -304,5 +304,8 @@
   "тихо {from}–{to}": "Ruhe {from}–{to}",
   "только что": "gerade eben",
   "увидит твоих людей": "sieht deine Menschen",
-  "через {n} мин": "in {n} Min."
+  "через {n} мин": "in {n} Min.",
+  "Убирать само": "Selbst ausblenden",
+  "Уведомление с сердечком уйдёт с экрана через 5 секунд.": "Die Herz-Mitteilung verschwindet nach 5 Sekunden vom Bildschirm.",
+  "Уведомление с сердечком останется, пока не закроешь его.": "Die Herz-Mitteilung bleibt, bis du sie schließt."
 }

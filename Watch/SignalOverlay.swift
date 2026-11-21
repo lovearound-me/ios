@@ -103,6 +103,8 @@ final class SignalNotificationController: WKUserNotificationHostingController<Si
         wave.text = SignalNotificationView.hearts(in: notification.request.content.body)
         // There's nothing to read or answer: the heart goes away by itself,
         // like the app's own, instead of waiting for «Закрыть» under it.
+        // Settings → «Убирать само» off: it waits.
+        guard AppModel.savedNotificationGoes else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.shownFor) { [weak self] in
             self?.performDismissAction()
         }

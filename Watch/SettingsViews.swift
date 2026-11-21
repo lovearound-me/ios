@@ -46,6 +46,16 @@ struct SettingsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            VStack(alignment: .leading, spacing: 2) {
+                Toggle(tr("Убирать само"), isOn: $model.notificationGoes)
+                    .accessibilityIdentifier("notificationGoes")
+                Text(model.notificationGoes
+                     ? tr("Уведомление с сердечком уйдёт с экрана через 5 секунд.")
+                     : tr("Уведомление с сердечком останется, пока не закроешь его."))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if let email = model.session?.email {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(tr("Аккаунт"))

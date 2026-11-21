@@ -205,12 +205,23 @@ struct ContactEditor: View {
                      : tr("Кружок на главном экране."))
             }
             if let link = contact.invite_url {
+                // Like one's own Love ID in «Аккаунт»: the link itself, not the name.
                 Section {
                     ShareLink(item: link) {
-                        Label(tr("Love ID: {name}", ["name": contact.label]), systemImage: "square.and.arrow.up")
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(verbatim: "Love ID")
+                                    .foregroundStyle(Theme.ink)
+                                Text(link.replacingOccurrences(of: "https://", with: ""))
+                                    .font(.app(13))
+                                    .foregroundStyle(Theme.muted)
+                            }
+                            Spacer()
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundStyle(Theme.link)
+                        }
                     }
-                } footer: {
-                    Text(link)
+                    .accessibilityLabel(tr("Love ID: {name}", ["name": contact.label]))
                 }
             }
             if let problem {

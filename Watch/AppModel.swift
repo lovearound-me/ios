@@ -48,6 +48,15 @@ final class AppModel: ObservableObject {
     @Published var layout: WatchLayout {
         didSet { if demo == nil { WatchLayout.saved = layout } }
     }
+    /// Settings → «Убирать само»: a heart's notification leaves the screen by
+    /// itself after `SignalNotificationController.shownFor` seconds; off, it
+    /// stays until the person closes it. Stays on this watch.
+    @Published var notificationGoes: Bool {
+        didSet { if demo == nil { UserDefaults.standard.set(notificationGoes, forKey: "notificationGoes") } }
+    }
+    nonisolated static var savedNotificationGoes: Bool {
+        UserDefaults.standard.object(forKey: "notificationGoes") as? Bool ?? true
+    }
     /// Settings → «Вибрация»: 1, the ordinary tap; 0, none. Stays on this
     /// watch; the server only hears whether it is none, to send quietly.
     @Published var taps: Int {
@@ -96,6 +105,7 @@ final class AppModel: ObservableObject {
         myColor = Self.savedColor
         layout = WatchLayout.saved
         taps = Taps.count
+        notificationGoes = Self.savedNotificationGoes
         screen = demo == nil && saved == nil ? .signIn : .main
         // Every stored property has its value from here on.
         session = saved

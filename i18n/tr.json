@@ -304,5 +304,8 @@
   "тихо {from}–{to}": "sessiz {from}–{to}",
   "только что": "az önce",
   "увидит твоих людей": "insanlarını görecek",
-  "через {n} мин": "{n} dk sonra"
+  "через {n} мин": "{n} dk sonra",
+  "Убирать само": "Kendiliğinden kapansın",
+  "Уведомление с сердечком уйдёт с экрана через 5 секунд.": "Kalp bildirimi 5 saniye sonra ekrandan kalkar.",
+  "Уведомление с сердечком останется, пока не закроешь его.": "Kalp bildirimi sen kapatana kadar kalır."
 }

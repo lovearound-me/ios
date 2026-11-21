@@ -304,5 +304,8 @@
   "тихо {from}–{to}": "quiet {from}–{to}",
   "только что": "just now",
   "увидит твоих людей": "will see your people",
-  "через {n} мин": "in {n} min"
+  "через {n} мин": "in {n} min",
+  "Убирать само": "Auto-dismiss",
+  "Уведомление с сердечком уйдёт с экрана через 5 секунд.": "The heart notification leaves the screen after 5 seconds.",
+  "Уведомление с сердечком останется, пока не закроешь его.": "The heart notification stays until you close it."
 }
