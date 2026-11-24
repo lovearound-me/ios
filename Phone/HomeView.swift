@@ -101,7 +101,7 @@ struct HomeView: View {
                     .accessibilityIdentifier("addToClose")
                 }
             }
-            Text(tr("Кому-нибудь: сердечко случайному человеку, раз в час. Он не узнает, от кого."))
+            Text(tr("Кому-нибудь: раз в час сердечко случайному человеку, у которого такие сердечки включены."))
                 .font(.app(13))
                 .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
