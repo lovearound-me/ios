@@ -12,7 +12,7 @@ struct ToysView: View {
         NavigationStack(path: $model.toysPath) {
             List {
                 Section {
-                    Text(tr("Игрушка, лампа или своя плата, которая светится, когда о тебе думают, или отправляет сердечко по кнопке."))
+                    Text(tr("Лампа или своя плата, которая светится, когда о тебе думают, или отправляет сердечко по кнопке."))
                         .font(.app(15))
                         .foregroundStyle(Theme.muted)
                         // The list's own insets: on iOS 26 a row narrower than
@@ -61,7 +61,7 @@ struct ToysView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.paper)
-            .navigationTitle(tr("Игрушки"))
+            .navigationTitle(tr("Устройства"))
             .navigationDestination(for: String.self) { element in
                 ToysView.destination(element)
             }
@@ -87,7 +87,7 @@ struct ToysView: View {
 }
 
 extension ToysView {
-    /// A page in «Игрушки»: a device's card, or one of its pages.
+    /// A page in «Устройства»: a device's card, or one of its pages.
     @ViewBuilder
     static func destination(_ element: String) -> some View {
         let (page, id) = DeviceCard.page(element)

@@ -37,7 +37,7 @@ final class PhoneLiveUITests: XCTestCase {
         XCTAssertTrue(app.element("send-\(person)").waitForExistence(timeout: 5))
         shot(app)
 
-        app.openTab("Игрушки")
+        app.openTab("Устройства")
         // The test account has one device of its own (the tools' «claude»).
         // A row reads as one: «claude, Принимает и отправляет · …».
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "claude")).firstMatch

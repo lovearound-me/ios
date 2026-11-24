@@ -16,7 +16,7 @@ struct DeviceCard: View {
     static func does(_ id: String) -> String { "does:" + id }
     static func name(_ id: String) -> String { "name:" + id }
 
-    /// A path element in «Игрушки»: which page, for which device.
+    /// A path element in «Устройства»: which page, for which device.
     static func page(_ element: String) -> (String, String) {
         guard let colon = element.firstIndex(of: ":") else { return ("card", element) }
         return (String(element[..<colon]), String(element[element.index(after: colon)...]))
@@ -168,7 +168,6 @@ struct DeviceCard: View {
         case "watch": return tr("Часы")
         case "lamp": return tr("Лампа")
         case "custom": return tr("Своя плата")
-        case "toy": return tr("Игрушка")
         default: return tr("Устройство")
         }
     }

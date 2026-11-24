@@ -99,7 +99,7 @@ struct MainTabs: View {
                 .tabItem { Label(tr("Книга"), systemImage: "book.closed") }
                 .tag(AppModel.Tab.book)
             ToysView()
-                .tabItem { Label(tr("Игрушки"), systemImage: "lightbulb") }
+                .tabItem { Label(tr("Устройства"), systemImage: "lightbulb") }
                 .tag(AppModel.Tab.toys)
             SettingsView()
                 .tabItem { Label(tr("Настройки"), systemImage: "slider.horizontal.3") }

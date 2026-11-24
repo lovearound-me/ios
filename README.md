@@ -40,7 +40,7 @@ iPhone's receiving off.
 - **«Книга»**: «Рядом» in its order (drag to change it), the others; a
   person's card: name, color, «Рядом», their Love ID, removing. «+» adds by
   a Love ID link, also from `lovearound://add/<code>`.
-- **«Игрушки»**: the account's devices; connect one by the six digits on its
+- **«Устройства»**: the account's devices; connect one by the six digits on its
   screen (a watch, a lamp), or make a token for a board of one's own. The
   tab reads "Devices" in every language but Russian.
 - **«Настройки»**: my color, hearts from anyone, pause, my Love ID, how the

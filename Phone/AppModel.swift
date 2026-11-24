@@ -63,7 +63,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var devices: [Device] = [] { didSet { keepForNextStart() } }
     @Published private(set) var devicesLoaded = false
     @Published private(set) var devicesProblem: String?
-    /// The device cards open in «Игрушки», by id (a demo opens one itself).
+    /// The device cards open in «Устройства», by id (a demo opens one itself).
     @Published var toysPath: [String] = []
     /// The pages open in «Настройки».
     @Published var settingsPath: [SettingsPage] = []
@@ -124,6 +124,7 @@ final class AppModel: ObservableObject {
         }
     }
     /// Take signals from «Кому-нибудь на свете» too: the server asks the stream.
+    /// Off until the person turns it on in «Кто может достучаться».
     @Published var acceptAnyone: Bool {
         didSet {
             defaults.set(acceptAnyone, forKey: "acceptAnyone")
@@ -187,7 +188,7 @@ final class AppModel: ObservableObject {
         }
         myColor = defaults.object(forKey: "myColor") as? Int ?? 1
         receiveHere = defaults.object(forKey: "receiveHere") as? Bool ?? true
-        acceptAnyone = defaults.object(forKey: "acceptAnyone") as? Bool ?? true
+        acceptAnyone = defaults.object(forKey: "acceptAnyone") as? Bool ?? false
         anyoneSentAt = defaults.object(forKey: "anyoneSentAt") as? Date
         pausedUntil = defaults.object(forKey: "pausedUntil") as? Date
         quietHours = (defaults.data(forKey: "quietHours")).flatMap { try? JSONDecoder().decode(QuietHours.self, from: $0) }

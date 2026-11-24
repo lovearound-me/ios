@@ -183,7 +183,7 @@ final class PhoneDemoUITests: XCTestCase {
 
     func testBoardGetsAToken() {
         let app = XCUIApplication.russian(demo: "toys")
-        app.openTab("Игрушки")
+        app.openTab("Устройства")
         let add = app.element("addBoard")
         XCTAssertTrue(add.waitForExistence(timeout: 5))
         add.tap()
@@ -197,7 +197,7 @@ final class PhoneDemoUITests: XCTestCase {
 
     func testPairByCode() {
         let app = XCUIApplication.russian(demo: "toys")
-        app.openTab("Игрушки")
+        app.openTab("Устройства")
         let pair = app.element("pairByCode")
         XCTAssertTrue(pair.waitForExistence(timeout: 5))
         pair.tap()
@@ -237,7 +237,7 @@ final class PhoneDemoUITests: XCTestCase {
     /// the summary.
     func testDeviceCardQuietHoursOff() {
         let app = XCUIApplication.russian(demo: "toys")
-        app.openTab("Игрушки")
+        app.openTab("Устройства")
         let lamp = app.element("device-d2")
         XCTAssertTrue(lamp.waitForExistence(timeout: 5))
         lamp.tap()
@@ -261,7 +261,7 @@ final class PhoneDemoUITests: XCTestCase {
     /// Everything off is fine: the device stays and does nothing.
     func testDeviceCanDoNothing() {
         let app = XCUIApplication.russian(demo: "toys")
-        app.openTab("Игрушки")
+        app.openTab("Устройства")
         let watch = app.element("device-d1")
         XCTAssertTrue(watch.waitForExistence(timeout: 5))
         watch.tap()
@@ -394,7 +394,7 @@ final class PhoneDemoUITests: XCTestCase {
     /// and help are a tap away.
     func testNoComingSoonAndPagesAreLinked() {
         let app = XCUIApplication.russian(demo: "toys")
-        app.openTab("Игрушки")
+        app.openTab("Устройства")
         XCTAssertTrue(app.element("device-d2").waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["скоро"].exists)
         app.openTab("Настройки")
