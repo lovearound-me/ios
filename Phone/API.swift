@@ -14,6 +14,20 @@ struct Device: Codable, Identifiable, Equatable {
     /// Whether it takes hearts from anyone in the world; none: as it asks.
     var accept_anyone: Bool? = nil
     var quiet_hours: QuietHours? = nil
+    // Device protocol v1 (DeviceParts.swift). How it joined: app | code | bluetooth.
+    var setup: String? = nil
+    /// "phone": a Bluetooth-only toy this phone talks for; else the server does.
+    var link: String? = nil
+    var tz: String? = nil
+    var book: DeviceBook? = nil
+    /// A socket of it is open now; none for a toy the phone talks for.
+    var online: Bool? = nil
+    var about: DeviceAbout? = nil
+    /// What the owner wants, as a revision, and the last one the device applied.
+    var rev: String? = nil
+    var values: PartValues? = nil
+    var applied: String? = nil
+    var battery: Int? = nil
 
     var receives: Bool { capabilities.contains("receive") }
     var sends: Bool { capabilities.contains("send") }
@@ -60,9 +74,11 @@ struct DeviceChange {
     var acceptAnyone: Bool?
     /// `.some(nil)` turns quiet hours off.
     var quietHours: QuietHours??
+    var book: DeviceBook?
 
     var body: [String: Any] {
         var body: [String: Any] = [:]
+        if let book { body["book"] = book.body }
         if let name { body["name"] = name }
         if let capabilities { body["capabilities"] = capabilities }
         if let acceptAnyone { body["accept_anyone"] = acceptAnyone }
@@ -82,6 +98,7 @@ struct DeviceChange {
         if let capabilities { device.capabilities = capabilities }
         if let acceptAnyone { device.accept_anyone = acceptAnyone }
         if let quietHours { device.quiet_hours = quietHours }
+        if let book { device.book = book }
         return device
     }
 }
@@ -111,6 +128,12 @@ enum APIError: LocalizedError {
     var status: Int {
         if case .status(let code, _) = self { return code }
         return 0
+    }
+
+    /// The server's `code`, for programs: "offline", "too_many", "no_about".
+    var code: String {
+        if case .status(_, let text) = self { return text }
+        return ""
     }
 
     var errorDescription: String? {
@@ -188,6 +211,58 @@ final class API {
         return (created.device, created.token)
     }
 
+    /// A board set up over Bluetooth, once it has joined Wi-Fi: its token
+    /// goes to it over Bluetooth and is never shown.
+    func addBluetoothBoard(name: String, capabilities: [String]) async throws -> (Device, String) {
+        struct Created: Codable { let device: Device; let token: String }
+        let body: [String: Any] = ["name": name, "setup": "bluetooth", "capabilities": capabilities,
+                                   "tz": TimeZone.current.identifier]
+        let created = try decode(Created.self, try await request("POST", "v1/devices", body: body))
+        return (created.device, created.token)
+    }
+
+    /// A Bluetooth-only toy: no token, this phone talks to the server for it.
+    func addToy(name: String, capabilities: [String]) async throws -> Device {
+        struct Created: Codable { let device: Device }
+        let body: [String: Any] = ["name": name, "setup": "bluetooth", "link": "phone", "capabilities": capabilities,
+                                   "tz": TimeZone.current.identifier]
+        return try decode(Created.self, try await request("POST", "v1/devices", body: body)).device
+    }
+
+    /// Merged into what was set before; `null` is back to the default. The
+    /// device as it is after. At most 10 a minute per device (429 too_many).
+    func setDeviceValues(_ id: String, _ values: PartValues) async throws -> Device {
+        let body: [String: Any] = ["values": values.mapValues { $0.mapValues(\.any) }]
+        return try decode(Device.self, try await request("PATCH", "v1/devices/\(id)/settings", body: body))
+    }
+
+    /// «Проверить»: a heart on that one device, as it is set now. 409
+    /// "offline" without an open socket of it.
+    func previewDevice(_ id: String) async throws {
+        _ = try await request("POST", "v1/devices/\(id)/preview")
+    }
+
+    /// For a toy this phone talks for: what it is made of → its `settings`
+    /// message, to write to it.
+    func putToyAbout(_ id: String, about: [String: Any]) async throws -> [String: Any] {
+        let data = try await request("PUT", "v1/devices/\(id)/about", body: about)
+        return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
+    }
+
+    /// For the same toy: the revision it applied, its battery.
+    func postToyState(_ id: String, rev: String?, battery: Int?) async throws {
+        var body: [String: Any] = [:]
+        if let rev { body["rev"] = rev }
+        if let battery { body["battery"] = battery }
+        guard !body.isEmpty else { return }
+        _ = try await request("POST", "v1/devices/\(id)/state", body: body)
+    }
+
+    /// A toy's button: the target is a signal's `to`, pasted as it is.
+    func signal(to target: Any) async throws {
+        _ = try await request("POST", "v1/events", body: ["type": "signal", "to": target])
+    }
+
     func deleteDevice(_ id: String) async throws {
         _ = try await request("DELETE", "v1/devices/\(id)")
     }
@@ -258,6 +333,12 @@ final class API {
             }
             guard (200..<300).contains(status) else {
                 let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+                // `error` is for people and may change; the texts matched in
+                // APIError are the old ones, kept. `code` is for programs.
+                let known = ["offline", "no_about", "phone_link", "server_link", "too_many", "bad_value", "no_send"]
+                if let code = json?["code"] as? String, known.contains(code) {
+                    throw APIError.status(status, code)
+                }
                 throw APIError.status(status, json?["error"] as? String ?? "")
             }
             return data

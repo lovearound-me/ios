@@ -40,9 +40,39 @@ iPhone's receiving off.
 - **«Книга»**: «Рядом» in its order (drag to change it), the others; a
   person's card: name, color, «Рядом», their Love ID, removing. «+» adds by
   a Love ID link, also from `lovearound://add/<code>`.
-- **«Устройства»**: the account's devices; connect one by the six digits on its
-  screen (a watch, a lamp), or make a token for a board of one's own. The
+- **«Устройства»**: the account's devices, by the server's device protocol v1
+  ([lovearound.me/docs/devices](https://lovearound.me/docs/devices)). The
   tab reads "Devices" in every language but Russian.
+  - «Подключить устройство», three ways: nearby over Bluetooth; the six
+    digits on its screen (a watch, a lamp); a token for a board of one's own.
+  - **A board with Wi-Fi, over Bluetooth** (`ConnectViews.swift`,
+    `BoardLink.swift`): Espressif's provisioning
+    ([ESPProvision](https://github.com/espressif/esp-idf-provisioning-ios),
+    BLE, Security 2 with one public username and password for every board
+    until boards have codes of their own (`BoardKey`), names that begin
+    `LoveAround-`). The
+    app reads the board's `about` (`lovearound-about`), the person confirms
+    what it is and wants, picks a network from the board's own scan, and
+    only once the board has joined it is the device made on the server and
+    its token sent (`lovearound-token`). A board that never comes online is
+    removed again. The password goes to the board, never to the server.
+  - **A toy without Wi-Fi** (`link: "phone"`, `ToyCenter.swift`): the phone
+    is its link. One CoreBluetooth central (service `80e80001-…`, JSON
+    messages in chunks with a flag byte) over a bonded, encrypted link; the
+    toy's `about` goes to the server, its settings come from there and are
+    written to the toy when it is near. A heart shown on this phone is
+    written to the toy; a press of its button is a heart from the account.
+    With the app closed the toy reads the heart's notification itself
+    (ANCS): the app only says so before iOS asks.
+  - **A device's card** is built from what the device said about itself
+    (`DeviceParts.swift`, `PartViews.swift`): a row and a page per part
+    (light, sound, vibration, motion, switch, screen, button; a kind the
+    app does not know is left out), «Проверить», who it can show and send
+    to, «Настроить заново». A change is sent after a pause and shows
+    «Передаём устройству…» until the device says it applied it. A device
+    that said nothing keeps the plain card.
+  - `--demo` has a made-up board and a made-up toy, so all of this can be
+    walked without hardware (the board's Wi-Fi password is `12345678`).
 - **«Настройки»**: my color, hearts from anyone, pause, my Love ID, how the
   account signs in, sign out, delete the account (an account that signs in
   with Apple confirms with Apple once more, and Apple forgets the app too:
@@ -98,7 +128,7 @@ API docs: [lovearound.me/docs](https://lovearound.me/docs).
 | Folder | What |
 |---|---|
 | `Shared/` | For both apps: contacts, Keychain, Apple sign-in through Firebase's REST API (no Firebase SDK), palette, strings, the app mark |
-| `Phone/` | The iPhone app (SwiftUI, iOS 17+): Firebase sign-in (Apple, Google, email), the API and WebSocket clients ported from the Mac app, `Demo.swift` for screenshots |
+| `Phone/` | The iPhone app (SwiftUI, iOS 17+): Firebase sign-in (Apple, Google, email), the API and WebSocket clients ported from the Mac app, devices over Bluetooth, `Demo.swift` for screenshots |
 | `Watch/` | The watch app (SwiftUI, watchOS 10+), its device-token API client, `Demo.swift` |
 | `PhoneUITests/`, `WatchUITests/` | UI tests: on made-up data (CI) and against the server (on a Mac) |
 | `i18n/` | One dictionary per language, keyed by the Russian text, for both apps |
@@ -165,7 +195,10 @@ dictionaries, so the same thing reads the same everywhere: «Кому-нибуд
 
 A signal carries no sender. The apps send only what the API needs. The
 iPhone keeps the account's Firebase refresh token in its Keychain, and my
-color, the pause and when it last sent to whom in `UserDefaults`; the watch
+color, the pause, when it last sent to whom, which Bluetooth toys are its
+own and the name (not the password) of the Wi-Fi it gave a board in
+`UserDefaults`; a board's Wi-Fi password goes from the phone to the board
+over Bluetooth, encrypted, and nowhere else; the watch
 keeps its device token and the account's email, and my color. The server
 keeps Apple's push token of each (hashed as the key, the token itself to
 send). Nothing else. Each bundle

@@ -5,7 +5,6 @@ import UIKit
 /// the six digits on its screen, or a board by its token.
 struct ToysView: View {
     @EnvironmentObject var model: AppModel
-    @State private var addingBoard = false
     @State private var removing: Device?
 
     var body: some View {
@@ -40,16 +39,12 @@ struct ToysView: View {
                 }
                 .listRowBackground(Theme.field)
                 Section {
-                    Button { model.pairing = AppModel.Pairing(code: "") } label: {
-                        Label(tr("Подключить по коду"), systemImage: "number")
+                    Button { model.connecting = AppModel.Connecting() } label: {
+                        Label(tr("Подключить устройство"), systemImage: "plus.circle.fill")
                     }
-                    .accessibilityIdentifier("pairByCode")
-                    Button { addingBoard = true } label: {
-                        Label(tr("Своя плата"), systemImage: "cpu")
-                    }
-                    .accessibilityIdentifier("addBoard")
+                    .accessibilityIdentifier("connectDevice")
                 } footer: {
-                    Text(tr("Код на шесть цифр показывают часы и лампы. Своей плате нужен токен: его вставляют в прошивку."))
+                    Text(tr("Рядом по Bluetooth, по коду на шесть цифр или своя плата с токеном."))
                 }
                 .listRowBackground(Theme.field)
                 Section {
@@ -67,8 +62,16 @@ struct ToysView: View {
             }
             .refreshable { await model.loadDevices() }
             .task { await model.loadDevices() }
-            .sheet(isPresented: $addingBoard) {
-                NavigationStack { BoardView() }
+            .sheet(item: $model.connecting) { connecting in
+                ConnectView(connecting)
+            }
+            .alert(tr("«{name}» отключено", ["name": model.toyGone?.name ?? ""]),
+                   isPresented: Binding(get: { model.toyGone != nil }, set: { if !$0 { model.toyGone = nil } })) {
+                Button(tr("Понятно"), role: .cancel) { model.toyGone = nil }
+            } message: {
+                Text(model.toyGone?.heard == true
+                     ? tr("Игрушка всё забыла. Осталось убрать её в Настройках iPhone → Bluetooth («Забыть это устройство»): сами мы этого сделать не можем.")
+                     : tr("Игрушки не было рядом, и она ещё помнит этот телефон. Сбрось её (как — в её инструкции) и убери в Настройках iPhone → Bluetooth («Забыть это устройство»)."))
             }
             .alert(tr("Отключить {name}?", ["name": removing?.name ?? ""]),
                    isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })) {
@@ -95,6 +98,10 @@ extension ToysView {
         case "who": DeviceWhoView(id: id)
         case "does": DeviceDoesView(id: id)
         case "name": DeviceNameView(id: id)
+        case "book": DeviceBookView(id: id)
+        case "part":
+            let (device, part) = DeviceCard.page(id)
+            PartView(id: device, partID: part)
         default: DeviceCard(id: id)
         }
     }
@@ -105,7 +112,7 @@ struct DeviceRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: DeviceRow.symbol(device.kind))
+            Image(systemName: device.about == nil ? DeviceRow.symbol(device.kind) : "heart")
                 .font(.app(18))
                 .foregroundStyle(Theme.ink)
                 .frame(width: 40, height: 40)
@@ -132,7 +139,9 @@ struct DeviceRow: View {
     }
 
     private var detail: String {
-        DeviceCard.doesLine(device) + Self.seen(device)
+        if device.throughPhone { return DeviceCard.doesLine(device) + " · " + tr("через телефон") }
+        if device.online == true { return DeviceCard.doesLine(device) + " · " + tr("в сети") }
+        return DeviceCard.doesLine(device) + Self.seen(device)
     }
 
     /// « · был онлайн 5 минут назад», or that it never connected.
@@ -156,6 +165,8 @@ struct DeviceRow: View {
 struct PairView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) private var dismiss
+    /// Set inside «Подключить устройство»: «Готово» closes that whole sheet.
+    @Environment(\.connectClose) private var closeAll
 
     @State private var code: String
     @State private var card: PairingCard?
@@ -245,11 +256,12 @@ struct PairView: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 if done != nil {
-                    Button(tr("Готово")) { dismiss() }
+                    Button(tr("Готово")) { (closeAll ?? { dismiss() })() }
                 }
             }
             ToolbarItem(placement: .cancellationAction) {
-                if done == nil {
+                // Pushed in «Подключить устройство», the back button does it.
+                if done == nil, closeAll == nil {
                     Button(tr("Отмена")) { dismiss() }
                 }
             }
@@ -311,6 +323,7 @@ struct PairView: View {
 struct BoardView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.connectClose) private var closeAll
 
     @State private var name = ""
     @State private var receives = true
@@ -369,9 +382,10 @@ struct BoardView: View {
         .navigationTitle(tr("Своя плата"))
         .navigationBarTitleDisplayMode(.inline)
         .interactiveDismissDisabled(token != nil && !copied)
+        .navigationBarBackButtonHidden(token != nil)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                if token == nil {
+                if token == nil, closeAll == nil {
                     Button(tr("Отмена")) { dismiss() }
                 }
             }
@@ -381,7 +395,7 @@ struct BoardView: View {
                         .disabled(busy || name.trimmingCharacters(in: .whitespaces).isEmpty || (!receives && !sends))
                         .accessibilityIdentifier("createBoard")
                 } else {
-                    Button(tr("Готово")) { dismiss() }
+                    Button(tr("Готово")) { (closeAll ?? { dismiss() })() }
                 }
             }
         }

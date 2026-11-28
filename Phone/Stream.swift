@@ -13,6 +13,8 @@ final class Stream {
     /// The address book may have changed: on every (re)connect, since events
     /// could be missed while offline, and on a "sync" hint from the server.
     var onSync: () -> Void = {}
+    /// A device's values, what it applied, its battery or its parts changed.
+    var onDevicesSync: () -> Void = {}
     /// True once the server said "ready" on the current socket, false when it is gone.
     var onOnline: (Bool) -> Void = { _ in }
 
@@ -172,7 +174,11 @@ final class Stream {
             online = true
             onSync()
         case "sync":
-            onSync()
+            if msg["what"] as? String == "devices" {
+                onDevicesSync()
+            } else {
+                onSync()
+            }
         case "event":
             // Unknown types and versions are ignored, so old apps survive new events.
             guard let event = msg["event"] as? [String: Any],

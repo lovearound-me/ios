@@ -8,7 +8,9 @@ struct Demo {
 
     static let names = ["signin", "home", "sent", "anyone", "empty", "signal", "paused", "offHere",
                         "book", "contact", "add", "choose", "toys", "board", "pair", "device", "deviceWho",
-                        "deviceDoes", "deviceBoard", "settings", "settingsAccount", "settingsWho", "notifyLook", "notifyIntro",
+                        "deviceDoes", "deviceBoard",
+                        "connect", "nearby", "confirmBoard", "wifi", "connected", "toyNotice",
+                        "deviceParts", "light", "button", "toy", "settings", "settingsAccount", "settingsWho", "notifyLook", "notifyIntro",
                         "how", "start"]
 
     /// A made-up name: the Russian one in Russian, the English one elsewhere.
@@ -61,6 +63,38 @@ struct Demo {
         Device(id: "d3", kind: "custom", name: Demo.said("Кнопка на столе", "Button on the desk"), capabilities: ["send"], last_seen_at: nil),
     ]
 
+    /// A board set up over Bluetooth that says what it is made of: a ring of
+    /// LEDs, a buzzer, a button (DemoBoardLink.about).
+    static func ring(id: String = "d4", name: String? = nil) -> Device {
+        let about = try? JSONDecoder().decode(DeviceAbout.self, from: JSONSerialization.data(withJSONObject: DemoBoardLink.about))
+        return Device(id: id, kind: "custom", name: name ?? Demo.said("Кольцо в прихожей", "Ring in the hall"),
+                      capabilities: ["receive", "send"], last_seen_at: ISO8601DateFormatter().string(from: Date()),
+                      requested_capabilities: ["receive", "send"], accept_anyone: true,
+                      setup: "bluetooth", link: "server", tz: TimeZone.current.identifier, book: .close, online: true,
+                      about: about, rev: "demo0",
+                      values: ["ring": ["on": .bool(true), "color": .string("#E86A9A"), "brightness": .int(60),
+                                        "effect": .string("heartbeat"), "speed": .int(50), "duration": .int(3), "idle": .string("off")],
+                               "beep": ["on": .bool(false), "volume": .int(40), "melody": .string("short")],
+                               "btn": ["press": .object(["anyone": .bool(true)]), "long_press": .object(["contact": .string("2")]),
+                                       "double_press": .null, "confirm": .bool(true)]],
+                      applied: "demo0")
+    }
+
+    /// A Bluetooth-only toy this phone talks for (ToyCenter.demoToyAbout).
+    static func band(id: String = "d5", name: String? = nil) -> Device {
+        let about = try? JSONDecoder().decode(DeviceAbout.self, from: JSONSerialization.data(withJSONObject: ToyCenter.demoToyAbout))
+        return Device(id: id, kind: "toy", name: name ?? Demo.said("Браслет «Пульс»", "Pulse band"),
+                      capabilities: ["receive"], last_seen_at: nil, requested_capabilities: ["receive"],
+                      setup: "bluetooth", link: "phone", tz: TimeZone.current.identifier, book: .close,
+                      about: about, rev: "demo0",
+                      values: ["buzz": ["on": .bool(true), "strength": .int(60), "pattern": .string("heartbeat")],
+                               "led": ["on": .bool(true), "color": .string("random"), "duration": .int(3)]],
+                      applied: "demo0", battery: 64)
+    }
+
+    /// The made-up devices with the two that say what they are made of.
+    static var allDevices: [Device] { devices + [ring(), band()] }
+
     @MainActor
     func apply(to model: AppModel) {
         let people = Demo.contacts
@@ -105,7 +139,20 @@ struct Demo {
         case "book", "contact", "add", "choose":
             model.demoSet(signedIn: true, contacts: people, tab: .book)
         case "toys", "board", "pair":
+            model.demoSet(signedIn: true, contacts: people, devices: Demo.allDevices, tab: .toys)
+        case "sample":
+            // A tester's walk (SampleView): the board and the toy are still
+            // to be connected.
             model.demoSet(signedIn: true, contacts: people, devices: Demo.devices, tab: .toys)
+        case "connect", "nearby", "confirmBoard", "wifi", "connected", "toyNotice":
+            model.demoSet(signedIn: true, contacts: people, devices: Demo.allDevices, tab: .toys)
+            model.connecting = AppModel.Connecting(demoStep: name)
+        case "deviceParts", "light", "button":
+            model.demoSet(signedIn: true, contacts: people, devices: Demo.allDevices, tab: .toys)
+            model.toysPath = ["d4"] + (name == "light" ? [DeviceCard.part("d4", "ring")] : name == "button" ? [DeviceCard.part("d4", "btn")] : [])
+        case "toy":
+            model.demoSet(signedIn: true, contacts: people, devices: Demo.allDevices, tab: .toys)
+            model.toysPath = ["d5"]
         case "device", "deviceWho", "deviceDoes":
             model.demoSet(signedIn: true, contacts: people, devices: Demo.devices, tab: .toys)
             model.toysPath = ["d2"] + (name == "deviceWho" ? [DeviceCard.who("d2")] : name == "deviceDoes" ? [DeviceCard.does("d2")] : [])

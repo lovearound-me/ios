@@ -1,9 +1,10 @@
 import SwiftUI
 import UIKit
 
-/// A device's card: who can reach it, what it does, its name; a board's new
-/// token; disconnecting. Each row opens a page of its own. How it glows will
-/// come with firmware that describes its own settings.
+/// A device's card: a row per part it says it is made of (protocol v1,
+/// DeviceParts.swift), who can reach it, what it does, its name; its link;
+/// «Проверить»; a board's new token; disconnecting. Each row opens a page of
+/// its own. A device that said nothing about itself keeps the plain card.
 struct DeviceCard: View {
     @EnvironmentObject var model: AppModel
     let id: String
@@ -11,10 +12,14 @@ struct DeviceCard: View {
     @State private var confirmingToken = false
     @State private var token: String?
     @State private var removing = false
+    @State private var rebinding = false
 
     static func who(_ id: String) -> String { "who:" + id }
     static func does(_ id: String) -> String { "does:" + id }
     static func name(_ id: String) -> String { "name:" + id }
+    static func book(_ id: String) -> String { "book:" + id }
+    /// Part ids are `[a-z0-9_]`, so the second colon is the divider.
+    static func part(_ id: String, _ part: String) -> String { "part:" + id + ":" + part }
 
     /// A path element in «Устройства»: which page, for which device.
     static func page(_ element: String) -> (String, String) {
@@ -50,11 +55,35 @@ struct DeviceCard: View {
                 header(device)
             }
             .listRowBackground(Color.clear)
-            Section {
-                NavigationLink(value: Self.who(id)) {
-                    row("heart.fill", tint: Theme.link, title: tr("Кто может достучаться"), sub: Self.reachLine(device))
+            if let about = device.about, !about.shownParts.isEmpty {
+                Section(tr("Как встречает сердечко")) {
+                    ForEach(about.shownParts) { part in
+                        NavigationLink(value: Self.part(id, part.id)) {
+                            row(part.known?.symbol ?? "gearshape", tint: part.known?.tint ?? Theme.muted, title: about.title(part),
+                                sub: Catalog.summary(part, device, contacts: model.contacts))
+                        }
+                        .accessibilityIdentifier("part-" + part.id)
+                    }
                 }
-                .accessibilityIdentifier("deviceWho")
+                .listRowBackground(Theme.field)
+            }
+            Section {
+                if device.throughPhone {
+                    // The phone routes for a toy: nothing to set here.
+                    row("heart.fill", tint: Theme.link, title: tr("Кто может достучаться"), sub: tr("как у этого iPhone"))
+                        .accessibilityIdentifier("deviceWhoPhone")
+                } else {
+                    NavigationLink(value: Self.who(id)) {
+                        row("heart.fill", tint: Theme.link, title: tr("Кто может достучаться"), sub: Self.reachLine(device))
+                    }
+                    .accessibilityIdentifier("deviceWho")
+                }
+                if device.about != nil, device.may("send") {
+                    NavigationLink(value: Self.book(id)) {
+                        row("person.2.fill", tint: Theme.indigo, title: tr("Кто в списке"), sub: DeviceBookView.line(device))
+                    }
+                    .accessibilityIdentifier("deviceBook")
+                }
                 NavigationLink(value: Self.does(id)) {
                     row("arrow.left.arrow.right", tint: Theme.ok, title: tr("Что делает"), sub: Self.doesLine(device))
                 }
@@ -63,16 +92,42 @@ struct DeviceCard: View {
                     row("pencil", tint: Theme.muted, title: tr("Название"), sub: device.name)
                 }
                 .accessibilityIdentifier("deviceName")
+            } header: {
+                if device.about != nil { Text(tr("Кто и когда")) }
+            } footer: {
+                if device.throughPhone {
+                    Text(tr("Игрушка получает то же, что уведомления этого телефона: тихие часы и «кому-нибудь на свете» меняются в настройках приложения."))
+                } else if device.about == nil {
+                    Text(tr("Устройство не рассказало, что в нём можно настроить"))
+                        .accessibilityIdentifier("noAbout")
+                }
             }
             .listRowBackground(Theme.field)
+            if device.bluetoothSetup {
+                linkSection(device)
+            }
             if !device.paired {
                 tokenSection
+            }
+            if device.about != nil {
+                Section {
+                    Button {
+                        Task { await model.preview(device) }
+                    } label: {
+                        Label(tr("Проверить"), systemImage: "heart.fill")
+                            .font(.app(17, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .accessibilityIdentifier("devicePreview")
+                }
+                .listRowBackground(Theme.heartSoft)
             }
             Section {
                 Button(tr("Отключить"), role: .destructive) { removing = true }
                     .accessibilityIdentifier("removeDevice")
             } footer: {
-                Text(device.paired ? tr("Вернуть его можно по коду с экрана устройства.") : "")
+                Text(device.bluetoothSetup ? tr("Вернуть его можно через «Подключить устройство» → «Рядом, по Bluetooth».")
+                     : device.paired ? tr("Вернуть его можно по коду с экрана устройства.") : "")
             }
             .listRowBackground(Theme.field)
         }
@@ -99,6 +154,32 @@ struct DeviceCard: View {
         }
     }
 
+    /// «Связь»: a board's Wi-Fi and setting it up again; a toy's phone.
+    @ViewBuilder
+    private func linkSection(_ device: Device) -> some View {
+        Section(tr("Связь")) {
+            if device.throughPhone {
+                LabeledContent("Bluetooth", value: model.toys.isMine(device.id) ? tr("этот iPhone") : tr("другой телефон"))
+                Button(tr("Привязать к другому телефону…")) { rebinding = true }
+                    .accessibilityIdentifier("toyRebind")
+            } else {
+                if let wifi = model.wifiName(device.id) {
+                    LabeledContent("Wi-Fi", value: wifi)
+                }
+                Button(tr("Настроить заново по Bluetooth…")) {
+                    model.connecting = AppModel.Connecting(again: device)
+                }
+                .accessibilityIdentifier("setUpAgain")
+            }
+        }
+        .listRowBackground(Theme.field)
+        .alert(tr("Привязать к другому телефону"), isPresented: $rebinding) {
+            Button(tr("Понятно"), role: .cancel) {}
+        } message: {
+            Text(tr("Игрушка дружит с одним телефоном. Отключи её здесь, зажми её кнопку на 3 секунды и подключи с другого телефона: «Подключить устройство» → «Рядом, по Bluetooth»."))
+        }
+    }
+
     private var tokenSection: some View {
         Section {
             Button {
@@ -115,7 +196,7 @@ struct DeviceCard: View {
 
     private func header(_ device: Device) -> some View {
         VStack(spacing: 8) {
-            Image(systemName: DeviceRow.symbol(device.kind))
+            Image(systemName: device.about == nil ? DeviceRow.symbol(device.kind) : "heart.fill")
                 .font(.app(32))
                 .foregroundStyle(Theme.heart)
                 .frame(width: 76, height: 76)
@@ -124,13 +205,35 @@ struct DeviceCard: View {
                 .font(.app(25, weight: .bold))
                 .foregroundStyle(Theme.ink)
                 .multilineTextAlignment(.center)
-            Text(Self.kindName(device.kind) + DeviceRow.seen(device))
+            status(device)
                 .font(.app(14))
-                .foregroundStyle(Theme.muted)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("deviceHeader")
+    }
+
+    /// «● В сети · heart-ring 2.1.0 · по Wi-Fi · 80%» for a device that says
+    /// what it is; the kind and when it was last seen for the others.
+    private func status(_ device: Device) -> Text {
+        guard device.about != nil || device.bluetoothSetup else {
+            return Text(Self.kindName(device.kind) + DeviceRow.seen(device)).foregroundColor(Theme.muted)
+        }
+        var rest: [String] = []
+        let lead: Text
+        if device.throughPhone {
+            let near = model.toys.near.contains(device.id)
+            lead = near ? Text("● " + tr("Рядом с телефоном")).foregroundColor(Theme.ok) : Text(tr("Не рядом")).foregroundColor(Theme.muted)
+            rest.append(model.toys.isMine(device.id) ? tr("через этот iPhone") : tr("через другой телефон"))
+        } else {
+            lead = device.online == true ? Text("● " + tr("В сети")).foregroundColor(Theme.ok)
+                : Text(tr("Не в сети")).foregroundColor(Theme.muted)
+            if let line = device.about?.modelLine, !line.isEmpty { rest.append(line) }
+            rest.append(tr("по Wi-Fi"))
+        }
+        if let battery = device.battery { rest.append(tr("батарея {n}%", ["n": String(battery)])) }
+        return lead + Text(" · " + rest.joined(separator: " · ")).foregroundColor(Theme.muted)
     }
 
     private func row(_ symbol: String, tint: Color, title: String, sub: String) -> some View {

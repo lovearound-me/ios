@@ -22,6 +22,11 @@ packages:
   GoogleSignIn:
     url: https://github.com/google/GoogleSignIn-iOS
     from: 10.0.0
+  # Setup over Bluetooth for boards with Wi-Fi: Espressif's Wi-Fi provisioning
+  # (Phone/BoardLink.swift).
+  ESPProvision:
+    url: https://github.com/espressif/esp-idf-provisioning-ios
+    from: 3.2.0
 
 settings:
   base:
@@ -51,6 +56,8 @@ targets:
       - target: LoveAroundWidgets
       - package: GoogleSignIn
         product: GoogleSignIn
+      - package: ESPProvision
+        product: ESPProvision
       # Linked by name, so the archive reads Siri's phrases (without it:
       # "no AppIntents.framework dependency", and AppShortcuts.strings
       # "not used in any App Shortcut").
@@ -84,6 +91,16 @@ targets:
           UIColorName: LaunchBackground
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ITSAppUsesNonExemptEncryption: false
+        # Devices nearby: setting a board up, and a toy without Wi-Fi that
+        # gets its hearts through this iPhone. Russian in ru.lproj/InfoPlist.strings.
+        NSBluetoothAlwaysUsageDescription: To set up a Love Around device next to you, and to pass hearts to a toy that has no Wi-Fi.
+        # The app never opens the camera. Espressif's setup library can read
+        # a QR code off a board and so links the camera classes, and App Store
+        # Connect turns down a build that links them without this line.
+        NSCameraUsageDescription: To read the QR code on a Love Around device while setting it up.
+        # A toy's button wakes the app to send a heart; its link comes back
+        # by itself when the toy is near (Phone/ToyCenter.swift).
+        UIBackgroundModes: [bluetooth-central]
     entitlements:
       path: Phone/LoveAround.entitlements
       properties:

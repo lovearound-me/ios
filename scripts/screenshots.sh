@@ -14,7 +14,7 @@ case "$app" in
     *iphonesimulator*)
         bundle=me.lovearound.ios
         os=iOS
-        screens="signin how notifyIntro home sent anyone empty start signal paused offHere book contact add choose toys board pair device deviceWho deviceDoes deviceBoard settings settingsAccount settingsWho notifyLook"
+        screens="signin how notifyIntro home sent anyone empty start signal paused offHere book contact add choose toys board pair device deviceWho deviceDoes deviceBoard connect nearby confirmBoard wifi connected toyNotice deviceParts light button toy settings settingsAccount settingsWho notifyLook"
         ;;
     *)
         bundle=me.lovearound.ios.watchkitapp

@@ -1,0 +1,5 @@
+/* What iOS shows when it asks about Bluetooth. */
+"NSBluetoothAlwaysUsageDescription" = "Чтобы настроить устройство Love Around рядом с тобой и передавать сердечки игрушке, у которой нет Wi-Fi.";
+
+/* Never asked: the setup library can read a QR code, the app does not (project.yml). */
+"NSCameraUsageDescription" = "Чтобы считать QR-код на устройстве Love Around при настройке.";

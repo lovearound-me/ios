@@ -184,6 +184,7 @@ final class PhoneDemoUITests: XCTestCase {
     func testBoardGetsAToken() {
         let app = XCUIApplication.russian(demo: "toys")
         app.openTab("Устройства")
+        app.openConnect()
         let add = app.element("addBoard")
         XCTAssertTrue(add.waitForExistence(timeout: 5))
         add.tap()
@@ -198,6 +199,7 @@ final class PhoneDemoUITests: XCTestCase {
     func testPairByCode() {
         let app = XCUIApplication.russian(demo: "toys")
         app.openTab("Устройства")
+        app.openConnect()
         let pair = app.element("pairByCode")
         XCTAssertTrue(pair.waitForExistence(timeout: 5))
         pair.tap()
@@ -209,6 +211,134 @@ final class PhoneDemoUITests: XCTestCase {
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
         confirm.tap()
         XCTAssertTrue(app.staticTexts["Подключено"].waitForExistence(timeout: 5))
+    }
+
+    /// Setup over Bluetooth, on a made-up board: what it is and wants, its
+    /// Wi-Fi, then its card with a row per part.
+    func testBluetoothBoardSetup() {
+        let app = XCUIApplication.russian(demo: "toys")
+        app.openTab("Устройства")
+        app.openConnect()
+        app.element("connectNearby").tap()
+        let board = app.element("nearbyBoard")
+        XCTAssertTrue(board.waitForExistence(timeout: 10))
+        board.tap()
+        let next = app.element("confirmDevice")
+        XCTAssertTrue(next.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Получать сердечки"].exists)
+        XCTAssertTrue(app.staticTexts["Отправлять сердечки"].exists)
+        next.tap()
+        // The strongest network is picked; a wrong password comes back here
+        // and leaves nothing in the account.
+        app.typeWifiPassword("87654321")
+        app.element("wifiConnect").tap()
+        XCTAssertTrue(app.staticTexts["Пароль не подошёл. Проверь его и попробуй ещё раз."].waitForExistence(timeout: 10))
+        app.typeWifiPassword("12345678", clearing: 8)
+        app.element("wifiConnect").tap()
+        let setUp = app.element("connectSetUp")
+        XCTAssertTrue(setUp.waitForExistence(timeout: 15))
+        XCTAssertTrue(app.staticTexts["Вышло на связь"].exists)
+        setUp.tap()
+        XCTAssertTrue(app.element("part-ring").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("part-btn").exists)
+        XCTAssertTrue(app.element("deviceHeader").label.contains("В сети"), app.element("deviceHeader").label)
+    }
+
+    /// A toy without Wi-Fi: the note about this iPhone first, then its card,
+    /// where who can reach it is the phone's to say.
+    func testBluetoothToySetup() {
+        let app = XCUIApplication.russian(demo: "toys")
+        app.openTab("Устройства")
+        app.openConnect()
+        app.element("connectNearby").tap()
+        let toy = app.element("nearbyToy")
+        XCTAssertTrue(toy.waitForExistence(timeout: 10))
+        toy.tap()
+        let understood = app.element("toyNoticeNext")
+        XCTAssertTrue(understood.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Уведомления Love Around на iPhone включены"].exists)
+        understood.tap()
+        let connect = app.element("confirmDevice")
+        XCTAssertTrue(connect.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["Отправлять сердечки"].exists)
+        connect.tap()
+        let setUp = app.element("connectSetUp")
+        XCTAssertTrue(setUp.waitForExistence(timeout: 10))
+        setUp.tap()
+        XCTAssertTrue(app.element("part-buzz").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.element("deviceWhoPhone").exists)
+        XCTAssertFalse(app.element("deviceWho").exists)
+    }
+
+    /// A part's page: a new color reaches the device and is in the card's
+    /// line.
+    func testLightColor() {
+        let app = XCUIApplication.russian(demo: "light")
+        let blue = app.element("color-2")
+        XCTAssertTrue(blue.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("appliedLine").exists)
+        blue.tap()
+        // «Передаём устройству…» is up for under a second: too short to catch.
+        XCTAssertTrue(app.element("appliedLine").waitForExistence(timeout: 5))
+        app.navigationBars.buttons.firstMatch.tap()
+        let light = app.element("part-ring")
+        XCTAssertTrue(light.waitForExistence(timeout: 5))
+        XCTAssertTrue(light.label.contains("голубой · сердцебиение · 60%"), light.label)
+    }
+
+    /// A button's press: to someone out there, to one person of the
+    /// device's list, or nothing.
+    func testButtonTargets() {
+        let app = XCUIApplication.russian(demo: "button")
+        let nothing = app.element("press-nothing")
+        XCTAssertTrue(nothing.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.element("press-anyone").isSelected)
+        XCTAssertTrue(app.element("long_press-who").exists)
+        nothing.tap()
+        XCTAssertTrue(nothing.isSelected)
+        app.navigationBars.buttons.firstMatch.tap()
+        let button = app.element("part-btn")
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        XCTAssertTrue(button.label.contains("ничего · долго: Аня"), button.label)
+    }
+
+    /// A tester without hardware: «Посмотреть на примере» opens the app on
+    /// a made-up account over the real one, with a board and a toy to connect.
+    func testSampleWalk() {
+        let app = XCUIApplication.russian(demo: "toys", environment: ["LA_SAMPLE": "1"])
+        app.openTab("Устройства")
+        app.openConnect()
+        app.element("connectNearby").tap()
+        let open = app.element("openSample")
+        XCTAssertTrue(open.waitForExistence(timeout: 10))
+        open.tap()
+        let close = app.element("closeSample")
+        XCTAssertTrue(close.waitForExistence(timeout: 10))
+        // The screens under the example are still in the tree, with the
+        // same ids.
+        app.top("connectDevice").tap()
+        app.top("connectNearby").tap()
+        XCTAssertTrue(app.top("nearbyBoard").waitForExistence(timeout: 10))
+        app.top("nearbyToy").tap()
+        app.top("toyNoticeNext").tap()
+        let connect = app.top("confirmDevice")
+        XCTAssertTrue(connect.waitForExistence(timeout: 10))
+        connect.tap()
+        let setUp = app.top("connectSetUp")
+        XCTAssertTrue(setUp.waitForExistence(timeout: 10))
+        setUp.tap()
+        XCTAssertTrue(app.top("part-buzz").waitForExistence(timeout: 5))
+        close.tap()
+        XCTAssertTrue(open.waitForExistence(timeout: 5))
+    }
+
+    /// A device that never said what it is made of keeps the plain card,
+    /// with one line about it.
+    func testDeviceWithoutPartsSaysSo() {
+        let app = XCUIApplication.russian(demo: "device")
+        XCTAssertTrue(app.element("deviceWho").waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Устройство не рассказало, что в нём можно настроить"].exists)
+        XCTAssertFalse(app.element("devicePreview").exists)
     }
 
     /// The QR on a watch or a lamp opens the pairing with its digits in.
@@ -441,6 +571,37 @@ extension XCUIApplication {
 
     func element(_ id: String) -> XCUIElement {
         descendants(matching: .any).matching(identifier: id).firstMatch
+    }
+
+    /// The element with this id that can be tapped: the one on top when a
+    /// screen covers another that has the same ids.
+    func top(_ id: String, timeout: TimeInterval = 10) -> XCUIElement {
+        let all = descendants(matching: .any).matching(identifier: id)
+        let end = Date().addingTimeInterval(timeout)
+        while Date() < end {
+            if let found = all.allElementsBoundByIndex.first(where: { $0.exists && $0.isHittable }) { return found }
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+        return all.firstMatch
+    }
+
+    /// «Устройства» → «Подключить устройство»: the three ways in.
+    func openConnect() {
+        let connect = element("connectDevice")
+        XCTAssertTrue(connect.waitForExistence(timeout: 5))
+        connect.tap()
+    }
+
+    /// Shown, not as dots: typing into a secure field drops characters.
+    func typeWifiPassword(_ text: String, clearing old: Int = 0) {
+        let shown = buttons["Показать пароль"]
+        XCTAssertTrue(shown.waitForExistence(timeout: 10))
+        shown.tap()
+        let field = textFields["wifiPassword"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old) + text)
+        buttons["Скрыть пароль"].tap()
     }
 
     func openTab(_ name: String) {

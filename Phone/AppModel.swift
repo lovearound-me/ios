@@ -20,6 +20,24 @@ final class AppModel: ObservableObject {
         var invite: String
     }
 
+    /// The «Подключить устройство» sheet; with a device, it is set up again
+    /// over Bluetooth (a new Wi-Fi, a new place) and keeps its name and values.
+    struct Connecting: Identifiable {
+        let id = UUID()
+        var again: Device?
+        /// A demo opens one of its screens.
+        var demoStep: String?
+    }
+
+    /// «Отключить» of a Bluetooth-only toy went through: what is left to do
+    /// by hand, since iOS lets no app unpair.
+    struct ToyGone: Identifiable {
+        let id = UUID()
+        let name: String
+        /// The toy was near and erased its side.
+        let heard: Bool
+    }
+
     /// The pairing sheet, opened by «Подключить по коду» or by the QR on a
     /// watch or a lamp (lovearound.me/login/devices#482913), digits filled in.
     struct Pairing: Identifiable {
@@ -53,6 +71,8 @@ final class AppModel: ObservableObject {
     let api: API
     let stream: Stream
     let demo: Demo?
+    /// Bluetooth: the nearby search and the toys this phone talks for.
+    let toys: ToyCenter
 
     @Published private(set) var signedIn = false
     @Published private(set) var email: String?
@@ -60,7 +80,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var inviteURL: String? { didSet { keepForNextStart() } }
     @Published private(set) var contacts: [Contact] = [] { didSet { keepForNextStart() } }
     @Published private(set) var loaded = false
-    @Published private(set) var devices: [Device] = [] { didSet { keepForNextStart() } }
+    /// Set outside this file only by DeviceModel.swift.
+    @Published var devices: [Device] = [] { didSet { keepForNextStart() } }
     @Published private(set) var devicesLoaded = false
     @Published private(set) var devicesProblem: String?
     /// The device cards open in «Устройства», by id (a demo opens one itself).
@@ -71,6 +92,8 @@ final class AppModel: ObservableObject {
     @Published var tab: Tab = .hearts
     @Published var adding: Adding?
     @Published var pairing: Pairing?
+    @Published var connecting: Connecting?
+    @Published var toyGone: ToyGone?
     /// «＋» among the circles: who of the book goes into «Рядом».
     @Published var choosingClose = false
     /// «Новый человек по ссылке» in that sheet: the add sheet comes once it closes.
@@ -161,7 +184,7 @@ final class AppModel: ObservableObject {
 
     /// A demo run (`--demo`) keeps its own, emptied at each launch: tests
     /// and screenshots on a signed-in phone leave its settings alone.
-    private let defaults: UserDefaults
+    let defaults: UserDefaults
     private var appleNonce = ""
     private var pendingAdd: String?
     private var pendingPair: String?
@@ -175,17 +198,42 @@ final class AppModel: ObservableObject {
     private var pushSync: Task<Void, Never>?
     /// What the server last took for this iPhone's notifications.
     private var pushSent: [String: String]?
+    // Device values on their way to the server (DeviceModel.swift): what
+    // changed and isn't sent yet, the wait before sending, who is sending.
+    var pendingValues: [String: PartValues] = [:]
+    var valueWaits: [String: Task<Void, Never>] = [:]
+    var valueFlights: Set<String> = []
+    /// When a heart last went to the toys: the socket and the notification
+    /// both come for one heart.
+    var lastToyHeart = Date.distantPast
+    var demoRevision = 0
 
-    init() {
+    /// The made-up account a tester without hardware walks (`SampleView`):
+    /// a second model next to the real one, which it never touches.
+    let isSample: Bool
+
+    /// «Посмотреть на примере» is offered in TestFlight and debug builds
+    /// only, never in the App Store's: there it is a decision still to make.
+    var offersSample: Bool {
+        guard Build.isTest, !isSample else { return false }
+        // Not on the demo screens, where it would get into the screenshots,
+        // unless a test asks for it.
+        return demo == nil || ProcessInfo.processInfo.environment["LA_SAMPLE"] == "1"
+    }
+
+    init(sample: Bool = false) {
         api = API(auth: auth)
         stream = Stream(auth: auth)
-        demo = Demo.fromArguments()
+        isSample = sample
+        demo = sample ? Demo(name: "sample") : Demo.fromArguments()
         if demo != nil, let scratch = UserDefaults(suiteName: "me.lovearound.demo") {
             scratch.removePersistentDomain(forName: "me.lovearound.demo")
             defaults = scratch
         } else {
             defaults = .standard
         }
+        toys = ToyCenter(defaults: defaults)
+        toys.demo = demo != nil
         myColor = defaults.object(forKey: "myColor") as? Int ?? 1
         receiveHere = defaults.object(forKey: "receiveHere") as? Bool ?? true
         acceptAnyone = defaults.object(forKey: "acceptAnyone") as? Bool ?? false
@@ -205,6 +253,10 @@ final class AppModel: ObservableObject {
         if demo == nil { WidgetData.myColor = myColor }
         stream.onAuthLost = { [weak self] in self?.signOut() }
         stream.onOnline = { [weak self] up in self?.connectionChanged(up) }
+        stream.onDevicesSync = { [weak self] in
+            Task { await self?.loadDevices() }
+        }
+        listenToToys()
         stream.onSync = { [weak self] in
             Task {
                 // Not halfway through saving a new order: that would show it half-applied.
@@ -221,6 +273,7 @@ final class AppModel: ObservableObject {
                 email = session.email
                 drawLastSeen()
             }
+            toys.start()
             push.onHeart = { [weak self] in self?.receive() }
             push.onToken = { [weak self] in self?.syncPush() }
             push.onTap = { [weak self] in self?.tapped() }
@@ -236,6 +289,8 @@ final class AppModel: ObservableObject {
         if receiveHere { stream.start() }
         Task { await reload() }
         Task { await refreshPush() }
+        // Their values, and whether they are online, change behind the app's back.
+        if devicesLoaded { Task { await loadDevices() } }
     }
 
     func wentToBackground() {
@@ -357,6 +412,7 @@ final class AppModel: ObservableObject {
     /// From the stream, or a notification while the app is in front; both
     /// come for one heart, so a second one while it glows is the same heart.
     private func receive() {
+        heartForToys()
         // Not shown, and not kept for later: a signal is about the moment.
         guard receiveHere, !isPaused, !isQuiet, !incoming else { return }
         showSignal()
@@ -717,6 +773,7 @@ final class AppModel: ObservableObject {
                 return
             }
         }
+        forgetDevice(device)
         devices.removeAll { $0.id == device.id }
         toysPath.removeAll { $0 == device.id }
     }
@@ -962,6 +1019,12 @@ final class AppModel: ObservableObject {
         toysPath = []
         adding = nil
         pairing = nil
+        connecting = nil
+        toyGone = nil
+        pendingValues = [:]
+        valueWaits.values.forEach { $0.cancel() }
+        valueWaits = [:]
+        if demo == nil { toys.reset() }
         choosingClose = false
         outgoing = nil
         incoming = false
@@ -1072,6 +1135,7 @@ final class AppModel: ObservableObject {
         loaded = signedIn
         self.devices = devices
         devicesLoaded = signedIn
+        toys.demoNear(devices.filter(\.throughPhone).map(\.id))
         self.tab = tab
         self.justSent = justSent
         self.outgoing = outgoing
