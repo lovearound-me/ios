@@ -491,5 +491,11 @@
   "Посмотреть на примере": "Ver com um exemplo",
   "Нет устройства под рукой? В примере плата и игрушка выдуманные: можно пройти все шаги и поменять настройки. Только в тестовых сборках.": "Sem dispositivo por perto? No exemplo a placa e o brinquedo são inventados: dá para passar por todos os passos e mudar os ajustes. Só em versões de teste.",
   "Это пример: люди и устройства выдуманные": "Isto é um exemplo: as pessoas e os dispositivos são inventados",
-  "Закрыть": "Fechar"
+  "Закрыть": "Fechar",
+  "Без Wi-Fi: сердечки идут через телефон, пока он рядом": "Sem Wi-Fi: os corações passam pelo telemóvel enquanto estiver perto",
+  "Как ему связываться": "Como se liga",
+  "По Wi-Fi": "Por Wi-Fi",
+  "Поменять потом можно, только подключив его заново.": "Para mudar depois, volta a configurá-lo.",
+  "Работает само, даже когда тебя нет рядом": "Funciona sozinho, mesmo quando não estás por perto",
+  "Через этот iPhone": "Através deste iPhone"
 }

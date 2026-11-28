@@ -215,17 +215,43 @@ extension AppModel {
         toys.onAbout = { [weak self] device, about in self?.toySaid(device, about) }
         toys.onNear = { [weak self] device in
             guard let self, let it = self.devices.first(where: { $0.id == device }) else { return }
+            self.toyContacts[device] = nil  // a new link: the toy gets the list again
             self.writeSettings(it)
         }
         toys.onApplied = { [weak self] device, rev in self?.toyApplied(device, rev) }
         toys.onBattery = { [weak self] device, level in self?.toyBattery(device, level) }
         toys.onPress = { [weak self] device, part, gesture in self?.toyPressed(device, part, gesture) }
+        toys.onSignal = { [weak self] device, to in self?.toySignal(device, to) }
     }
 
     /// The values the server keeps, written to the toy when it is near.
     func writeSettings(_ device: Device) {
         guard device.throughPhone, device.rev != nil else { return }
         toys.send(device.settingsMessage(), to: device.id)
+        writeContacts(device)
+    }
+
+    /// A toy that sends and has a screen to pick on gets the people its
+    /// book shows, as the server would give them to a board: only when the
+    /// list changed. 40 at most, short labels: a message is 4 KB.
+    func writeContacts(_ device: Device) {
+        guard device.throughPhone, device.sends, toys.near.contains(device.id),
+              (device.about?.parts ?? []).contains(where: { $0.known == .screen }) else { return }
+        let people = device.people(of: contacts).prefix(40).map { person -> [String: Any] in
+            let hex = Palette.all[((person.color ?? 0) % Palette.all.count + Palette.all.count) % Palette.all.count].color
+            return ["id": person.id, "label": String(person.label.prefix(24)), "close": person.isClose,
+                    "rgb": String(format: "#%06X", hex)]
+        }
+        let message: [String: Any] = ["type": "contacts", "contacts": Array(people)]
+        guard let data = try? JSONSerialization.data(withJSONObject: message, options: [.sortedKeys]),
+              toyContacts[device.id] != data else { return }
+        toyContacts[device.id] = data
+        toys.send(message, to: device.id)
+    }
+
+    /// The book or the people changed: the toys near get the new list.
+    func writeContactsToToys() {
+        for device in devices where device.throughPhone { writeContacts(device) }
     }
 
     /// «Отключить»: a toy erases its bond if it is near; either way iOS
@@ -293,6 +319,27 @@ extension AppModel {
     }
 
     /// A press on the toy woke the app: it sends as the button is set.
+    /// A heart picked on a toy's screen: sent as the toy, and the server's
+    /// answer goes back so its screen can say what happened.
+    private func toySignal(_ id: String, _ to: Any) {
+        guard demo == nil, signedIn, let device = devices.first(where: { $0.id == id }) else { return }
+        guard device.sends else {
+            toys.send(["type": "sent", "code": 403], to: id)
+            return
+        }
+        Task {
+            var code = 202
+            do {
+                try await api.signal(to: to)
+            } catch APIError.status(let status, _) {
+                code = status
+            } catch {
+                code = -1
+            }
+            toys.send(["type": "sent", "code": code], to: id)
+        }
+    }
+
     private func toyPressed(_ id: String, _ part: String, _ gesture: String) {
         guard demo == nil, signedIn, let device = devices.first(where: { $0.id == id }), device.sends else { return }
         let target = ButtonTarget(device.values?[part]?[gesture])

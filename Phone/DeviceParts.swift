@@ -180,12 +180,15 @@ struct DeviceAbout: Codable, Equatable {
     var firmware: String? = nil
     /// What it asks to do, read once at setup: receive and/or send.
     var wants: [String]? = nil
+    /// How it can talk to the server: "server" (its own Wi-Fi), "phone"
+    /// (through this iPhone), or both, and then the person picks.
+    var links: [String]? = nil
     var parts: [DevicePart] = []
 }
 
 extension DeviceAbout {
     private enum Keys: String, CodingKey {
-        case proto, model, firmware, wants, parts
+        case proto, model, firmware, wants, links, parts
     }
 
     /// Lenient: a part that doesn't read is skipped, not the whole device.
@@ -195,6 +198,7 @@ extension DeviceAbout {
         model = try? fields.decode(String.self, forKey: .model)
         firmware = try? fields.decode(String.self, forKey: .firmware)
         wants = try? fields.decode([String].self, forKey: .wants)
+        links = try? fields.decode([String].self, forKey: .links)
         parts = []
         guard var list = try? fields.nestedUnkeyedContainer(forKey: .parts) else { return }
         while !list.isAtEnd {

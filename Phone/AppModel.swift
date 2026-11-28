@@ -78,10 +78,21 @@ final class AppModel: ObservableObject {
     @Published private(set) var email: String?
     @Published private(set) var provider: String?
     @Published private(set) var inviteURL: String? { didSet { keepForNextStart() } }
-    @Published private(set) var contacts: [Contact] = [] { didSet { keepForNextStart() } }
+    @Published private(set) var contacts: [Contact] = [] {
+        didSet {
+            keepForNextStart()
+            if contacts != oldValue { writeContactsToToys() }
+        }
+    }
     @Published private(set) var loaded = false
     /// Set outside this file only by DeviceModel.swift.
-    @Published var devices: [Device] = [] { didSet { keepForNextStart() } }
+    @Published var devices: [Device] = [] {
+        didSet {
+            keepForNextStart()
+            // A book changed: its toy's list follows (sent only if it differs).
+            writeContactsToToys()
+        }
+    }
     @Published private(set) var devicesLoaded = false
     @Published private(set) var devicesProblem: String?
     /// The device cards open in «Устройства», by id (a demo opens one itself).
@@ -206,6 +217,8 @@ final class AppModel: ObservableObject {
     /// When a heart last went to the toys: the socket and the notification
     /// both come for one heart.
     var lastToyHeart = Date.distantPast
+    /// The contacts message each toy last got, so it is sent only on a change.
+    var toyContacts: [String: Data] = [:]
     var demoRevision = 0
 
     /// The made-up account a tester without hardware walks (`SampleView`):

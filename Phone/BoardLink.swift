@@ -58,6 +58,9 @@ protocol BoardLink: AnyObject {
     /// The device token, to its `lovearound-token` endpoint. Throws `.token`
     /// when the board said no, `.connection` when its answer never came.
     func send(token: String) async throws
+    /// Through this iPhone from now on: `{"link":"phone"}`, to the same
+    /// `lovearound-token` endpoint. The board restarts as a Bluetooth toy.
+    func sendPhoneLink() async throws
     func close()
 }
 
@@ -188,6 +191,14 @@ final class ESPBoardLink: BoardLink {
         }
     }
 
+    func sendPhoneLink() async throws {
+        let body = try JSONSerialization.data(withJSONObject: ["link": "phone"])
+        let answer = try await send(path: "lovearound-token", body, failing: .connection)
+        guard let said = (try? JSONSerialization.jsonObject(with: answer)) as? [String: Any], said["ok"] as? Bool == true else {
+            throw SetupError.about
+        }
+    }
+
     func close() {
         device?.disconnect()
         device = nil
@@ -214,7 +225,7 @@ final class DemoBoardLink: BoardLink {
     static let name = "LoveAround-7C3A"
     static let password = "12345678"
     static let about: [String: Any] = [
-        "proto": 1, "model": "heart-ring", "firmware": "2.1.0", "wants": ["receive", "send"],
+        "proto": 1, "model": "heart-ring", "firmware": "2.1.0", "wants": ["receive", "send"], "links": ["server", "phone"],
         "parts": [
             ["id": "ring", "kind": "light", "leds": 24,
              "settings": ["on", "color", "brightness", "effect", "speed", "duration", "idle"],
@@ -246,6 +257,10 @@ final class DemoBoardLink: BoardLink {
     }
 
     func send(token: String) async throws {
+        try? await Task.sleep(nanoseconds: 400_000_000)
+    }
+
+    func sendPhoneLink() async throws {
         try? await Task.sleep(nanoseconds: 400_000_000)
     }
 

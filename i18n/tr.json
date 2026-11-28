@@ -491,5 +491,11 @@
   "Посмотреть на примере": "Bir örnekle dene",
   "Нет устройства под рукой? В примере плата и игрушка выдуманные: можно пройти все шаги и поменять настройки. Только в тестовых сборках.": "Elinin altında cihaz yok mu? Örnekteki kart ve oyuncak uydurmadır: tüm adımları geçebilir, ayarları değiştirebilirsin. Yalnızca test sürümlerinde.",
   "Это пример: люди и устройства выдуманные": "Bu bir örnek: kişiler ve cihazlar uydurmadır",
-  "Закрыть": "Kapat"
+  "Закрыть": "Kapat",
+  "Без Wi-Fi: сердечки идут через телефон, пока он рядом": "Wi-Fi yok: kalpler telefon yakındayken onun üzerinden gelir",
+  "Как ему связываться": "Nasıl bağlanır",
+  "По Wi-Fi": "Wi-Fi ile",
+  "Поменять потом можно, только подключив его заново.": "Sonra değiştirmek için yeniden kur.",
+  "Работает само, даже когда тебя нет рядом": "Kendi başına çalışır, sen yakında olmasan da",
+  "Через этот iPhone": "Bu iPhone üzerinden"
 }

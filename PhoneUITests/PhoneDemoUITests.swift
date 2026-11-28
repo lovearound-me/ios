@@ -244,6 +244,29 @@ final class PhoneDemoUITests: XCTestCase {
         XCTAssertTrue(app.element("deviceHeader").label.contains("В сети"), app.element("deviceHeader").label)
     }
 
+    /// A board that can do both asks which; through this iPhone, it becomes
+    /// a toy the phone talks for, with no Wi-Fi step at all.
+    func testBoardThroughPhone() {
+        let app = XCUIApplication.russian(demo: "toys")
+        app.openTab("Устройства")
+        app.openConnect()
+        app.element("connectNearby").tap()
+        let board = app.element("nearbyBoard")
+        XCTAssertTrue(board.waitForExistence(timeout: 10))
+        board.tap()
+        let next = app.element("confirmDevice")
+        XCTAssertTrue(next.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Как ему связываться"].exists)
+        XCTAssertEqual(next.label, "Дальше: Wi-Fi")
+        app.element("linkPhone").tap()
+        XCTAssertEqual(next.label, "Подключить")
+        next.tap()
+        let done = app.element("connectDone")
+        XCTAssertTrue(done.waitForExistence(timeout: 15))
+        XCTAssertTrue(app.staticTexts["Настройки записаны в устройство"].exists)
+        XCTAssertFalse(app.element("wifiConnect").exists)
+    }
+
     /// A toy without Wi-Fi: the note about this iPhone first, then its card,
     /// where who can reach it is the phone's to say.
     func testBluetoothToySetup() {

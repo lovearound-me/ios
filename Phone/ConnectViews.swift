@@ -22,7 +22,9 @@ extension EnvironmentValues {
 /// Bluetooth"): a board's `about` → the confirm screen → Wi-Fi → only then
 /// the device on the server and its token → its first connection. A toy
 /// without Wi-Fi: the note about this iPhone → pairing and its `about` →
-/// the confirm screen → the device on the server, no token.
+/// the confirm screen → the device on the server, no token. A board that
+/// can do both (`about.links`) asks which on the confirm screen; through the
+/// phone, it is told so, restarts as a toy and is paired as one.
 @MainActor
 final class ConnectFlow: ObservableObject {
     enum Mark {
@@ -46,6 +48,8 @@ final class ConnectFlow: ObservableObject {
     @Published var failed: String?
     @Published var made: Device?
     @Published var pairing = false
+    /// A board that can do both: through this iPhone rather than its own Wi-Fi.
+    @Published var throughPhone = false
 
     /// Set up again: the same device, a new token.
     let again: Device?
@@ -59,6 +63,15 @@ final class ConnectFlow: ObservableObject {
     }
 
     var isToy: Bool { picked?.toy == true }
+    /// Ends up a toy this iPhone talks for: one already, or a board switched.
+    var asToy: Bool { isToy || throughPhone }
+    /// The board said it can go either way.
+    var offersChoice: Bool {
+        guard !isToy, let links = about?.links else { return false }
+        return links.contains("server") && links.contains("phone")
+    }
+    /// The toy a switched board became, once found.
+    private var switchedToy: UUID?
     var finished: Bool { marks.allSatisfy { $0 == .done } }
 
     /// A row of the search was tapped.
@@ -190,6 +203,55 @@ final class ConnectFlow: ObservableObject {
         }
     }
 
+    /// Through this iPhone: the board is told so over its setup link, comes
+    /// back a few seconds later as a Bluetooth toy (its own address, the same
+    /// name), and is paired and added like any toy. Set up again, the old
+    /// device goes once the new one is in.
+    func connectThroughPhone(model: AppModel) {
+        guard let link, let picked, !running else { return }
+        running = true
+        failed = nil
+        marks = [.doing, .waiting, .waiting]
+        path.append(.progress)
+        Task {
+            defer { running = false }
+            do {
+                try await link.sendPhoneLink()
+                link.close()
+                self.link = nil
+                let toy = try await findSwitched(picked.name, model: model)
+                switchedToy = toy
+                let said = try await model.toys.pair(toy)
+                if model.demo == nil { take(said, fallback: picked.name) }
+                model.toys.stopSearch()
+                marks = [.done, .doing, .waiting]
+                let device = try await model.makeToy(name: trimmedName, about: raw, peripheral: toy)
+                if let again { await model.removeDevice(again) }
+                marks = [.done, .done, .done]
+                made = device
+            } catch {
+                link.close()
+                self.link = nil
+                failed = message(error)
+            }
+        }
+    }
+
+    /// The board again, now advertising the toy service under its name.
+    private func findSwitched(_ name: String, model: AppModel) async throws -> UUID {
+        if model.demo != nil {
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            return ToyCenter.demoToy
+        }
+        model.toys.search()
+        for _ in 0..<100 {
+            if let toy = model.toys.found.first(where: { $0.toy && $0.name == name }) { return toy.id }
+            try? await Task.sleep(nanoseconds: 300_000_000)
+        }
+        model.toys.stopSearch()
+        throw SetupError.notFound
+    }
+
     func connectToy(model: AppModel) {
         guard let picked, !running else { return }
         running = true
@@ -224,6 +286,9 @@ final class ConnectFlow: ObservableObject {
         link = nil
         failed = nil
         problem = nil
+        if let switchedToy, made == nil { model.toys.drop(switchedToy) }
+        switchedToy = nil
+        throughPhone = false
         picked = nil
         about = nil
         password = ""
@@ -238,6 +303,7 @@ final class ConnectFlow: ObservableObject {
         link = nil
         model.toys.stopSearch()
         if let picked, picked.toy, made == nil { model.toys.drop(picked.id) }
+        if let switchedToy, made == nil { model.toys.drop(switchedToy) }
     }
 
     /// A demo's screenshot of one step.
@@ -661,6 +727,18 @@ struct ConfirmDeviceView: View {
                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 }
             }
+            if flow.offersChoice {
+                Section {
+                    way(phone: false, tr("По Wi-Fi"), tr("Работает само, даже когда тебя нет рядом"), symbol: "wifi")
+                    way(phone: true, tr("Через этот iPhone"), tr("Без Wi-Fi: сердечки идут через телефон, пока он рядом"),
+                        symbol: "iphone.radiowaves.left.and.right")
+                } header: {
+                    Text(tr("Как ему связываться"))
+                } footer: {
+                    Text(tr("Поменять потом можно, только подключив его заново."))
+                }
+                .listRowBackground(Theme.field)
+            }
             if flow.again == nil {
                 Section(tr("Название")) {
                     TextField(tr("Например, Котик на полке"), text: $flow.name)
@@ -674,9 +752,11 @@ struct ConfirmDeviceView: View {
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 8) {
-                Button(flow.isToy ? tr("Подключить") : tr("Дальше: Wi-Fi")) {
+                Button(flow.asToy ? tr("Подключить") : tr("Дальше: Wi-Fi")) {
                     if flow.isToy {
                         flow.connectToy(model: model)
+                    } else if flow.throughPhone {
+                        flow.connectThroughPhone(model: model)
                     } else {
                         flow.path.append(.wifi)
                     }
@@ -696,8 +776,37 @@ struct ConfirmDeviceView: View {
 
     private var subtitle: String {
         let firmware = about.firmware.map { tr("Прошивка {version}", ["version": $0]) }
-        let link = flow.isToy ? tr("через этот iPhone") : tr("через Wi-Fi")
+        let link = flow.offersChoice ? nil : flow.isToy ? tr("через этот iPhone") : tr("через Wi-Fi")
         return [firmware, link].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    private func way(phone: Bool, _ title: String, _ sub: String, symbol: String) -> some View {
+        Button {
+            flow.throughPhone = phone
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: symbol)
+                    .font(.app(20))
+                    .foregroundStyle(Theme.link)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.app(17))
+                        .foregroundStyle(Theme.ink)
+                    Text(sub)
+                        .font(.app(14))
+                        .foregroundStyle(Theme.muted)
+                }
+                Spacer()
+                Image(systemName: flow.throughPhone == phone ? "checkmark.circle.fill" : "circle")
+                    .font(.app(22))
+                    .foregroundStyle(flow.throughPhone == phone ? Theme.link : Theme.muted)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(phone ? "linkPhone" : "linkWifi")
+        .accessibilityAddTraits(flow.throughPhone == phone ? .isSelected : [])
     }
 
     private func chip(_ part: DevicePart) -> String {
@@ -860,7 +969,7 @@ struct ConnectProgressView: View {
     @Environment(\.connectClose) private var close
 
     private var steps: [String] {
-        if flow.isToy {
+        if flow.asToy {
             return [tr("Связались по Bluetooth"), tr("Добавлено в твой аккаунт"), tr("Настройки записаны в устройство")]
         }
         let joined = flow.ssid.isEmpty ? tr("Подключилось к Wi-Fi") : tr("Подключилось к {name}", ["name": flow.ssid])
@@ -882,7 +991,7 @@ struct ConnectProgressView: View {
                         .multilineTextAlignment(.center)
                         .accessibilityIdentifier("connectTitle")
                     if flow.finished {
-                        Text(flow.isToy ? tr("Сердечки ему будет передавать этот iPhone, пока он рядом.")
+                        Text(flow.asToy ? tr("Сердечки ему будет передавать этот iPhone, пока он рядом.")
                              : tr("Теперь оно в сети само, телефон ему больше не нужен."))
                             .font(.app(15))
                             .foregroundStyle(Theme.muted)
@@ -903,7 +1012,7 @@ struct ConnectProgressView: View {
             } footer: {
                 if let failed = flow.failed {
                     Text(failed).foregroundStyle(Theme.danger)
-                } else if !flow.isToy, !flow.finished {
+                } else if !flow.asToy, !flow.finished {
                     Text(tr("Не подошёл пароль? Вернём на шаг с Wi-Fi, а в аккаунте ничего лишнего не останется."))
                 }
             }

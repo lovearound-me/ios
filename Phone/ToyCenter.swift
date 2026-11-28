@@ -52,6 +52,8 @@ final class ToyCenter: NSObject, ObservableObject {
     var onApplied: (_ device: String, _ rev: String) -> Void = { _, _ in }
     var onBattery: (_ device: String, _ level: Int) -> Void = { _, _ in }
     var onPress: (_ device: String, _ part: String, _ gesture: String) -> Void = { _, _, _ in }
+    /// A heart from a toy with a screen, to whoever it picked: a signal's `to`.
+    var onSignal: (_ device: String, _ to: Any) -> Void = { _, _ in }
 
     /// `--demo`: no radio, a made-up board and a made-up toy.
     var demo = false
@@ -306,6 +308,8 @@ final class ToyCenter: NSObject, ObservableObject {
             if let device = peer.device, let part = message["part"] as? String, let gesture = message["gesture"] as? String {
                 onPress(device, part, gesture)
             }
+        case "signal":
+            if let device = peer.device, let to = message["to"] { onSignal(device, to) }
         default:
             // Unknown types are skipped, so a newer toy works with this app.
             break
